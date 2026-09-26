@@ -5,10 +5,10 @@
 
 ## 목록
 
-| 번호 | 제목 | 상태 |
-|---|---|---|
-| [0001](0001-nextjs-app-router.md) | Next.js App Router 사용 | 승인 |
-| [0002](0002-self-hosted-cms.md) | 자체 CMS와 PostgreSQL로 콘텐츠 관리 | 승인 |
+| 번호                              | 제목                                | 상태 |
+| --------------------------------- | ----------------------------------- | ---- |
+| [0001](0001-nextjs-app-router.md) | Next.js App Router 사용             | 승인 |
+| [0002](0002-self-hosted-cms.md)   | 자체 CMS와 PostgreSQL로 콘텐츠 관리 | 승인 |
 
 ## 작성 방법
 

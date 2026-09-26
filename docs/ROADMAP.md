@@ -7,8 +7,8 @@
 - [x] Next.js 프로젝트 생성 (App Router, TypeScript, Tailwind, pnpm)
 - [x] GitHub 저장소 연결
 - [x] 프로젝트 문서 작성 (스펙, 로드맵, ADR)
-- [ ] Prettier, ESLint 규칙 정리
-- [ ] GitHub Actions CI (lint, 타입 체크, 빌드)
+- [x] Prettier, ESLint 규칙 정리
+- [x] GitHub Actions CI (포맷, lint, 타입 체크, 빌드)
 - [ ] Vercel 배포 연결
 - [ ] 디자인 토큰 (색상, 타이포그래피, 간격) 정의
 
@@ -70,5 +70,5 @@
 이력서와 면접에서 사용할 수치를 작업할 때마다 기록합니다.
 
 | 날짜 | 항목 | 개선 전 | 개선 후 | 방법 | 관련 PR / 글 |
-|---|---|---|---|---|---|
-| | | | | | |
+| ---- | ---- | ------- | ------- | ---- | ------------ |
+|      |      |         |         |      |              |

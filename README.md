@@ -11,17 +11,17 @@
 
 ## 기술 스택
 
-| 영역 | 선택 |
-|---|---|
+| 영역       | 선택                                    |
+| ---------- | --------------------------------------- |
 | 프레임워크 | Next.js (App Router), React, TypeScript |
-| 스타일 | Tailwind CSS + 자체 UI 컴포넌트 |
-| DB / ORM | PostgreSQL + Drizzle ORM |
-| 인증 | Auth.js (GitHub OAuth) |
-| 에디터 | Tiptap (ProseMirror) |
-| 테스트 | Vitest, Testing Library, Playwright |
-| 문서화 | Storybook |
-| 배포 / CI | Vercel, GitHub Actions, Lighthouse CI |
-| 모니터링 | Vercel Analytics, Sentry |
+| 스타일     | Tailwind CSS + 자체 UI 컴포넌트         |
+| DB / ORM   | PostgreSQL + Drizzle ORM                |
+| 인증       | Auth.js (GitHub OAuth)                  |
+| 에디터     | Tiptap (ProseMirror)                    |
+| 테스트     | Vitest, Testing Library, Playwright     |
+| 문서화     | Storybook                               |
+| 배포 / CI  | Vercel, GitHub Actions, Lighthouse CI   |
+| 모니터링   | Vercel Analytics, Sentry                |
 
 ## 문서
 
