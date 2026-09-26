@@ -40,6 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# gemini-cli
-.gemini/
+# gemini-cli (리뷰 커맨드만 커밋)
+.gemini/*
+!.gemini/commands/
 gha-creds-*.json
