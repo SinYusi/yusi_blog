@@ -1,0 +1,112 @@
+# Gemini CLI로 PR 코드 리뷰를 수행합니다.
+# 공식 예제(google-github-actions/run-gemini-cli의 gemini-dispatch + pr-review)를 하나로 합쳐 단순화했습니다.
+#
+# 실행 조건
+# - PR이 열리거나 다시 열리거나 draft에서 전환될 때 (fork PR 제외)
+# - PR 코멘트가 "@gemini-cli /review"로 시작할 때 (OWNER, MEMBER, COLLABORATOR만)
+#   예: "@gemini-cli /review 성능 위주로 봐줘"
+name: Gemini Review
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: gemini-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: |-
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.fork == false &&
+        github.event.pull_request.draft == false
+      ) || (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        github.event.sender.type == 'User' &&
+        startsWith(github.event.comment.body, '@gemini-cli /review') &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Prepare prompt context
+        run: |-
+          mkdir -p .gemini
+          jq -n \
+            --arg repo "${REPOSITORY}" \
+            --arg pr "${PULL_REQUEST_NUMBER}" \
+            --arg context "${ADDITIONAL_CONTEXT}" \
+            '{repository: $repo, pull_request_number: $pr, additional_context: $context}' > .gemini/context.json
+        env:
+          REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          ADDITIONAL_CONTEXT: ""
+
+      # 코멘트 본문은 스크립트에 직접 넣지 않고 환경 변수로만 전달합니다 (스크립트 인젝션 방지).
+      - name: Add comment instructions to context
+        if: github.event_name == 'issue_comment'
+        run: |-
+          context="${COMMENT_BODY#@gemini-cli /review}"
+          jq --arg context "${context}" '.additional_context = $context' .gemini/context.json > .gemini/context.tmp
+          mv .gemini/context.tmp .gemini/context.json
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+
+      - name: Run Gemini pull request review
+        uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: ${{ vars.GEMINI_MODEL }}
+          workflow_name: gemini-review
+          github_pr_number: ${{ github.event.pull_request.number || github.event.issue.number }}
+          settings: |-
+            {
+              "model": {
+                "maxSessionTurns": 25
+              },
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server:v0.27.0"
+                  ],
+                  "includeTools": [
+                    "add_comment_to_pending_review",
+                    "pull_request_read",
+                    "pull_request_review_write"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                  }
+                }
+              },
+              "tools": {
+                "core": []
+              }
+            }
+          extensions: |
+            [
+              "https://github.com/gemini-cli-extensions/code-review"
+            ]
+          prompt: /pr-code-review
