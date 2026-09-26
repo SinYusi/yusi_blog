@@ -39,9 +39,27 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      # 코멘트 트리거(issue_comment)는 PR 정보를 담고 있지 않으므로, 직접 조회해 fork PR이면 중단합니다.
+      - name: Reject fork pull requests
+        if: github.event_name == 'issue_comment'
+        run: |-
+          head_repo="$(gh api "repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}" --jq '.head.repo.full_name')"
+          if [[ "${head_repo}" != "${REPOSITORY}" ]]; then
+            echo "::error::fork PR(${head_repo})에서는 리뷰를 실행하지 않습니다."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST_NUMBER: ${{ github.event.issue.number }}
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+
+      - name: Record start time
+        id: start
+        run: echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${GITHUB_OUTPUT}"
 
       # 코멘트 본문은 스크립트에 직접 넣지 않고 환경 변수로만 전달합니다 (스크립트 인젝션 방지).
       - name: Build review arguments
@@ -60,7 +78,7 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body }}
 
       - name: Run Gemini pull request review
-        uses: google-github-actions/run-gemini-cli@v0
+        uses: google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489 # v0.1.22
         env:
           GEMINI_CLI_TRUST_WORKSPACE: "true"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,7 +104,7 @@ jobs:
                     "--rm",
                     "-e",
                     "GITHUB_PERSONAL_ACCESS_TOKEN",
-                    "ghcr.io/github/github-mcp-server:v0.27.0"
+                    "ghcr.io/github/github-mcp-server:v0.27.0@sha256:a1d43076a36638ee24520fd6e83c3905ae41bc9850179081df1de2ba3a7afae0"
                   ],
                   "includeTools": [
                     "add_comment_to_pending_review",
@@ -105,3 +123,20 @@ jobs:
           # 프로젝트 전용 리뷰 커맨드: .gemini/commands/yusi-review.toml
           prompt: |-
             /yusi-review ${{ steps.args.outputs.value }}
+
+      # 모델이 도구 호출에 실패해도 CLI는 성공으로 끝날 수 있으므로, 리뷰가 실제로 게시됐는지 확인합니다.
+      - name: Verify review was posted
+        run: |-
+          count="$(gh api "repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}/reviews" --paginate \
+            --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .submitted_at >= \"${STARTED_AT}\")] | length" \
+            | jq -s 'add')"
+          if [[ "${count}" -eq 0 ]]; then
+            echo "::error::Gemini가 PR 리뷰를 게시하지 않았습니다. GEMINI_DEBUG=true로 다시 실행해 로그를 확인하세요."
+            exit 1
+          fi
+          echo "게시된 리뷰: ${count}건"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          STARTED_AT: ${{ steps.start.outputs.time }}
