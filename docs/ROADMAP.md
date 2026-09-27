@@ -10,7 +10,7 @@
 - [x] Prettier, ESLint 규칙 정리
 - [x] GitHub Actions CI (포맷, lint, 타입 체크, 빌드)
 - [x] AI 코드 리뷰 도입 (CodeRabbit, Gemini API)
-- [x] 작업 흐름 정의, 이슈/PR 템플릿
+- [x] 작업 흐름 정의 (dev 브랜치, 릴리스 규칙), 이슈/PR 템플릿
 - [ ] Vercel 배포 연결
 - [ ] 디자인 토큰 (색상, 타이포그래피, 간격) 정의
 

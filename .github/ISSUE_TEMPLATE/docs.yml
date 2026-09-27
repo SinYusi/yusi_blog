@@ -1,6 +1,6 @@
-name: 작업
-description: 설정, CI, 의존성, 리팩터링, 테스트 등 기능과 문서 외 작업
-labels: [chore]
+name: 문서
+description: 문서 작성, 수정 (스펙, ADR, README 등)
+labels: [documentation]
 body:
   - type: textarea
     id: purpose
