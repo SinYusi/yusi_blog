@@ -33,6 +33,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Color contrast
+        run: pnpm check:contrast
+
       - name: Typecheck
         run: pnpm typecheck
 
