@@ -9,6 +9,8 @@ changelog:
       labels: [performance]
     - title: 디자인
       labels: [design]
+    - title: 접근성
+      labels: [accessibility]
     - title: 문서
       labels: [documentation]
     - title: 기타
