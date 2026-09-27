@@ -12,7 +12,7 @@ body:
     id: tasks
     attributes:
       label: 작업 내용
-      value: |
+      placeholder: |
         - [ ]
     validations:
       required: true

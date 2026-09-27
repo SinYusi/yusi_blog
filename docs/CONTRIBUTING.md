@@ -92,7 +92,7 @@ chore/2-workflow  ─┘
 
 ## PR
 
-- 제목은 커밋 메시지 형식을 따릅니다. Squash merge를 하면 PR 제목이 main의 커밋 메시지가 됩니다.
+- 제목은 커밋 메시지 형식을 따릅니다. Squash merge를 하면 PR 제목이 dev의 커밋 메시지가 됩니다.
 - 하나의 PR은 하나의 이슈만 다룹니다.
 - 성능, 번들 크기, 접근성 수치가 바뀌면 PR의 성과 기록 표와 `docs/ROADMAP.md` 성과 기록 표에 남깁니다.
 
