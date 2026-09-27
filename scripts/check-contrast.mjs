@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 
 const MIN_RATIO = 4.5;
+const REQUIRED_THEMES = ["dark", "light"];
 const CSS_PATH = new URL("../src/app/globals.css", import.meta.url);
 
 // [글자 토큰, 배경 토큰들]
@@ -45,11 +46,12 @@ function contrast(a, b) {
 }
 
 const themes = readThemes(readFileSync(CSS_PATH, "utf8"));
-const themeNames = Object.keys(themes);
-if (themeNames.length === 0) {
-  console.error("globals.css에서 [data-theme] 블록을 찾지 못했습니다.");
+const missingThemes = REQUIRED_THEMES.filter((name) => !themes[name]);
+if (missingThemes.length > 0) {
+  console.error(`globals.css에 테마 블록이 없습니다: ${missingThemes.join(", ")}`);
   process.exit(1);
 }
+const themeNames = Object.keys(themes);
 
 let failures = 0;
 for (const theme of themeNames) {

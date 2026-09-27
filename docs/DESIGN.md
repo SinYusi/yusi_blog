@@ -17,9 +17,9 @@
 | `code`          | `#0a0e18`   | `#eef2f8` | 코드 블록, 로그           |
 | `border`        | `#263049`   | `#dbe1ec` | 구분선, 기본 테두리       |
 | `border-strong` | `#36415c`   | `#c5cedd` | 강조 테두리, 모달         |
-| `text`          | `#e3e8f2`   | `#141a2a` | 기본 글자                 |
+| `fg`            | `#e3e8f2`   | `#141a2a` | 기본 글자                 |
 | `fg-secondary`  | `#b3bdd3`   | `#3a4459` | 보조 본문, 카드 요약      |
-| `text-article`  | `#cdd5e5`   | `#2a3246` | 글 본문                   |
+| `fg-article`    | `#cdd5e5`   | `#2a3246` | 글 본문                   |
 | `muted`         | `#8f9bb5`   | `#55617a` | 날짜 외 메타, 비활성 링크 |
 | `accent`        | `#6cb6ff`   | `#1b64c8` | 링크, 강조, 주요 버튼     |
 | `accent-hover`  | `#a3d2ff`   | `#0f5fc4` | 링크·버튼 호버, 포커스 링 |
