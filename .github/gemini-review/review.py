@@ -16,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -24,6 +25,9 @@ DEFAULT_MODEL = "gemini-3.5-flash-lite"
 IGNORED_FILES = {"pnpm-lock.yaml", "next-env.d.ts"}
 MAX_DIFF_CHARS = 200_000
 PROMPT_PATH = Path(__file__).with_name("prompt.md")
+# 서버 과부하(503) 같은 일시적 오류는 대기 후 재시도합니다. 사용량 초과(429)는 재시도해도 풀리지 않으므로 제외합니다.
+RETRYABLE_STATUS = {500, 502, 503, 504}
+RETRY_DELAYS_SECONDS = [15, 45, 90]
 
 SEVERITY_LABELS = {
     "critical": "🔴 Critical",
@@ -117,13 +121,19 @@ def call_gemini(model: str, api_key: str, system_prompt: str, user_prompt: str) 
         data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
     )
-    try:
-        with urllib.request.urlopen(request, timeout=300) as response:
-            body = json.load(response)
-    except urllib.error.HTTPError as error:
-        detail = error.read().decode(errors="replace")
-        hint = " (무료 사용량 초과일 수 있습니다)" if error.code == 429 else ""
-        sys.exit(f"Gemini API 오류 {error.code}{hint}: {detail[:2000]}")
+    for attempt, delay in enumerate([*RETRY_DELAYS_SECONDS, None], start=1):
+        try:
+            with urllib.request.urlopen(request, timeout=300) as response:
+                body = json.load(response)
+            break
+        except urllib.error.HTTPError as error:
+            detail = error.read().decode(errors="replace")
+            if error.code in RETRYABLE_STATUS and delay is not None:
+                print(f"Gemini API 오류 {error.code}, {delay}초 후 재시도 ({attempt}/{len(RETRY_DELAYS_SECONDS)})")
+                time.sleep(delay)
+                continue
+            hint = " (무료 사용량 초과일 수 있습니다)" if error.code == 429 else ""
+            sys.exit(f"Gemini API 오류 {error.code}{hint}: {detail[:2000]}")
 
     candidate = (body.get("candidates") or [{}])[0]
     parts = candidate.get("content", {}).get("parts", [])
