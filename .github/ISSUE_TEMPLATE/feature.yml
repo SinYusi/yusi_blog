@@ -1,0 +1,37 @@
+name: 기능
+description: 새 기능 추가 또는 기존 기능 개선
+labels: [enhancement]
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 목적
+      description: 왜 필요한가? 어떤 문제를 해결하는가?
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: 작업 내용
+      description: 체크리스트로 작성합니다.
+      placeholder: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 기준
+      description: 무엇이 되면 완료인가? 확인할 수 있는 형태로 작성합니다.
+    validations:
+      required: true
+  - type: textarea
+    id: quality
+    attributes:
+      label: 성능 / 접근성 고려 사항
+      description: Core Web Vitals, 번들 크기, 접근성에 영향이 있다면 적습니다.
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 자료
+      description: 관련 문서(docs/SPEC.md, ADR), 링크, 디자인 등
