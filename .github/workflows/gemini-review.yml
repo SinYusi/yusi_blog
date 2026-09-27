@@ -5,7 +5,8 @@
 # 모델은 구조화된 JSON 리뷰만 반환하도록 구성했습니다. 자세한 배경은 docs/adr/0003-ai-code-review.md.
 #
 # 실행 조건
-# - PR이 열리거나 다시 열리거나 draft에서 전환될 때 (fork PR 제외)
+# - dev 대상 PR이 열리거나 다시 열리거나 draft에서 전환될 때 (fork PR 제외)
+#   릴리스 PR(dev → main)은 이미 리뷰된 변경이므로 제외합니다.
 # - PR 코멘트가 "@gemini-cli /review"로 시작할 때 (OWNER, MEMBER, COLLABORATOR만)
 #   예: "@gemini-cli /review 성능 위주로 봐줘"
 name: Gemini Review
@@ -13,12 +14,9 @@ name: Gemini Review
 on:
   pull_request:
     types: [opened, reopened, ready_for_review]
+    branches: [dev]
   issue_comment:
     types: [created]
-
-concurrency:
-  group: gemini-review-${{ github.event.pull_request.number || github.event.issue.number }}
-  cancel-in-progress: true
 
 jobs:
   review:
@@ -34,8 +32,13 @@ jobs:
         startsWith(github.event.comment.body, '@gemini-cli /review') &&
         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
       )
+    # concurrency를 워크플로 수준에 두면 if 평가 전에 그룹에 들어가, 결국 skip될 봇 코멘트 실행이
+    # 진행 중인 리뷰를 취소합니다. job 수준에 두면 실제로 실행되는 리뷰끼리만 경쟁합니다.
+    concurrency:
+      group: gemini-review-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: write
