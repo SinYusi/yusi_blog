@@ -15,7 +15,7 @@
 2. 최신 `dev`에서 `<type>/<이슈번호>-<짧은-설명>` 브랜치를 만든다.
 3. 작업하고, 커밋 전에 format:check, lint, typecheck, build를 통과시킨다.
 4. `dev`를 대상으로 .github/pull_request_template.md 형식의 PR을 만들고 `Closes #이슈번호`를 넣는다.
-5. CodeRabbit, Gemini 리뷰를 기다린다. 리뷰가 달리지 않으면 `@coderabbitai review`, `@gemini-cli /review`로 요청한다.
+5. CodeRabbit, Gemini 리뷰를 기다린다. 리뷰가 달리지 않으면 `@coderabbitai review`, `@gemini-cli /review`로 요청한다. 머지 전 필수 리뷰는 변경 범위에 따라 다르다(docs/CONTRIBUTING.md 5단계 표: 문서만 바꾸면 Gemini만).
 6. 타당한 지적은 반영하고 스레드에 반영 커밋을 답글로 단 뒤 해결 처리한다. 반영하지 않는 지적에는 근거를 답글로 남긴다.
 7. CI 통과와 리뷰 반영이 끝나면 사용자에게 머지를 요청한다. 직접 머지하지 않는다.
 8. 머지 후 다음 작업 전에 `dev`를 pull한다.
