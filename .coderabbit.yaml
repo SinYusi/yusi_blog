@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: ko-KR
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!pnpm-lock.yaml"
+    - "!next-env.d.ts"
+  path_instructions:
+    - path: "src/**/*.{ts,tsx}"
+      instructions: >-
+        Next.js App Router 프로젝트입니다. 서버/클라이언트 컴포넌트 경계, 불필요한 "use client",
+        Core Web Vitals(LCP, CLS, INP)에 영향을 주는 코드, 접근성(시맨틱 마크업, ARIA, 키보드 조작),
+        타입 안전성을 중점적으로 확인해 주세요.
+    - path: "docs/**/*.md"
+      instructions: >-
+        프로젝트 스펙과 기술 결정 기록입니다. 문서 간 내용이 서로 모순되지 않는지 확인해 주세요.
+    - path: ".github/workflows/**"
+      instructions: >-
+        권한 최소화, 시크릿 노출, 스크립트 인젝션 위험을 확인해 주세요.
+chat:
+  auto_reply: true

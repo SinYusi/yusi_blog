@@ -1,0 +1,70 @@
+# Gemini API로 PR 코드 리뷰를 수행합니다.
+#
+# 모델이 GitHub 도구를 직접 호출하는 방식(run-gemini-cli + GitHub MCP)은 가벼운 모델에서
+# 도구 호출에 실패하면서도 성공으로 끝나는 문제가 있어, 스크립트가 diff 수집과 리뷰 게시를 맡고
+# 모델은 구조화된 JSON 리뷰만 반환하도록 구성했습니다. 자세한 배경은 docs/adr/0003-ai-code-review.md.
+#
+# 실행 조건
+# - PR이 열리거나 다시 열리거나 draft에서 전환될 때 (fork PR 제외)
+# - PR 코멘트가 "@gemini-cli /review"로 시작할 때 (OWNER, MEMBER, COLLABORATOR만)
+#   예: "@gemini-cli /review 성능 위주로 봐줘"
+name: Gemini Review
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: gemini-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: |-
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.fork == false &&
+        github.event.pull_request.draft == false
+      ) || (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        github.event.sender.type == 'User' &&
+        startsWith(github.event.comment.body, '@gemini-cli /review') &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+    steps:
+      # 코멘트 트리거(issue_comment)는 PR 정보를 담고 있지 않으므로, 직접 조회해 fork PR이면 중단합니다.
+      - name: Reject fork pull requests
+        if: github.event_name == 'issue_comment'
+        run: |-
+          head_repo="$(gh api "repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}" --jq '.head.repo.full_name')"
+          if [[ "${head_repo}" != "${REPOSITORY}" ]]; then
+            echo "::error::fork PR(${head_repo})에서는 리뷰를 실행하지 않습니다."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/gemini-review
+
+      # 코멘트 본문은 스크립트에 직접 넣지 않고 환경 변수로만 전달합니다 (스크립트 인젝션 방지).
+      - name: Review with Gemini
+        run: |-
+          export ADDITIONAL_CONTEXT="${COMMENT_BODY#@gemini-cli /review}"
+          python3 .github/gemini-review/review.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
