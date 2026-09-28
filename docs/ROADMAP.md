@@ -9,7 +9,7 @@
 - [x] 프로젝트 문서 작성 (스펙, 로드맵, ADR)
 - [x] Prettier, ESLint 규칙 정리
 - [x] GitHub Actions CI (포맷, lint, 타입 체크, 빌드)
-- [x] AI 코드 리뷰 도입 (CodeRabbit, Gemini API)
+- [x] AI 코드 리뷰 도입 (CodeRabbit, Gemini API → Codex로 교체, ADR-0008)
 - [x] 작업 흐름 정의 (dev 브랜치, 릴리스 규칙), 이슈/PR 템플릿
 - [x] Vercel 배포 연결 (운영: main, 미리보기: 그 외 브랜치)
 - [x] 화면 설계: 전체 화면 시안, 반응형 규칙, 컴포넌트 목록 (docs/DESIGN.md)
