@@ -82,6 +82,12 @@
 - 요소 단위로 `data-theme`을 지정하면 그 안만 다른 테마로 보여 줄 수 있습니다 (`/design` 페이지의 색 견본).
 - 토큰 확인 페이지: `/design`
 
+### 글 본문
+
+- 본문 HTML은 `src/lib/content/render.ts`에서 허용 목록으로 정화한 뒤 스타일(`.prose-article`)을 적용합니다. 규칙은 `src/db/seed-data.ts` 상단 주석을 따릅니다.
+- 코드 하이라이트는 Shiki 이중 테마(`github-light-default`, `github-dark-default`)를 CSS 변수로 전환합니다. 배경은 `code` 토큰을 쓰고, 라이트 테마의 주석 색(#6e7781, 4.05:1)은 `muted`(#55617a, 5.53:1)로 바꿉니다. 두 테마의 코드 색은 모두 WCAG AA 이상입니다.
+- 목차: 데스크톱은 스크롤 위치를 따라가는 사이드바, 그보다 좁으면 `<details>` 접이식.
+
 ## 6. 화면 목록
 
 | 영역   | 화면                                                                         | 시안                                   |

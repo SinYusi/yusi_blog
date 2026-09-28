@@ -145,3 +145,206 @@
     padding: 0 2px;
   }
 }
+
+/*
+ * 글 본문. 본문 HTML은 DB에서 오므로 클래스를 달 수 없어, 태그 선택자로 스타일을 지정합니다.
+ * 값은 모두 디자인 토큰을 씁니다.
+ */
+@layer components {
+  .prose-article {
+    color: var(--fg-article);
+    font-size: var(--text-body-lg);
+    line-height: 1.9;
+    padding-top: 0.5rem;
+  }
+
+  .prose-article > * + * {
+    margin-top: 1.25em;
+  }
+
+  .prose-article :where(h2) {
+    margin-top: 2.6em;
+    margin-bottom: -0.25em;
+    color: var(--fg);
+    font-size: var(--text-h2);
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.018em;
+    scroll-margin-top: 1.5rem;
+  }
+
+  .prose-article :where(h2)::before {
+    content: "## ";
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+  }
+
+  .prose-article :where(h3) {
+    margin-top: 2em;
+    color: var(--fg);
+    font-size: var(--text-h3);
+    font-weight: 600;
+    scroll-margin-top: 1.5rem;
+  }
+
+  .prose-article :where(strong) {
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  .prose-article :where(a) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .prose-article :where(a:hover) {
+    color: var(--accent-hover);
+  }
+
+  .prose-article :where(ul, ol) {
+    padding-left: 1.4em;
+  }
+
+  .prose-article :where(ul) {
+    list-style: disc;
+  }
+
+  .prose-article :where(ol) {
+    list-style: decimal;
+  }
+
+  .prose-article :where(li + li) {
+    margin-top: 0.4em;
+  }
+
+  .prose-article :where(:not(pre) > code) {
+    padding: 0.15em 0.4em;
+    border-radius: var(--radius-sm);
+    background: var(--code);
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+
+  /* 코드 블록: 파일명·복사 버튼 머리글 + Shiki 이중 테마 */
+  .prose-article .code-block {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+  }
+
+  .prose-article .code-block figcaption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.4rem 0.5rem 0.4rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+  }
+
+  .prose-article .code-block figcaption button {
+    min-height: 2.75rem;
+    padding: 0 0.75rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .prose-article .code-block figcaption button:hover {
+    color: var(--fg);
+  }
+
+  .prose-article .code-block pre {
+    overflow-x: auto;
+    margin: 0;
+    padding: 1.1rem 1.25rem;
+    background: var(--code) !important;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.85;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  [data-theme="dark"] .prose-article .shiki,
+  [data-theme="dark"] .prose-article .shiki span {
+    color: var(--shiki-dark, var(--fg));
+  }
+
+  [data-theme="light"] .prose-article .shiki,
+  [data-theme="light"] .prose-article .shiki span {
+    color: var(--shiki-light, var(--fg));
+  }
+
+  .prose-article .code-block[data-kind="log"] pre {
+    color: var(--fg-secondary) !important;
+  }
+
+  /* 표: 좁은 화면에서는 가로로 스크롤 */
+  .prose-article .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+  }
+
+  .prose-article :where(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-body);
+    line-height: 1.6;
+  }
+
+  .prose-article :where(th) {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+    font-weight: 500;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .prose-article :where(td) {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--fg-article);
+  }
+
+  .prose-article :where(tr:last-child td) {
+    border-bottom: 0;
+  }
+
+  /* 콜아웃: 종류는 강조 문구의 색으로 구분 */
+  .prose-article :where(aside[data-callout]) {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    font-size: var(--text-body);
+  }
+
+  .prose-article :where(aside[data-callout] > * + *) {
+    margin-top: 0.75em;
+  }
+
+  .prose-article :where(aside[data-callout="info"] strong) {
+    color: var(--accent);
+  }
+
+  .prose-article :where(aside[data-callout="warning"] strong) {
+    color: var(--date);
+  }
+
+  .prose-article :where(aside[data-callout="danger"] strong) {
+    color: var(--danger);
+  }
+}

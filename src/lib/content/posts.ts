@@ -1,10 +1,12 @@
 import "server-only";
 
-import { and, count, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { getDb } from "@/db";
 import { posts, postTags, series, tags } from "@/db/schema";
+
+import { renderPostHtml, type TocItem } from "./render";
 
 /*
  * 공개 페이지용 조회 함수. 모두 'use cache'로 캐시되어 빌드 시 정적 셸에 포함됩니다.
@@ -106,4 +108,91 @@ export async function getTagSummaries() {
     .innerJoin(posts, and(eq(posts.id, postTags.postId), isPublic))
     .groupBy(tags.id)
     .orderBy(desc(count(posts.id)), tags.name);
+}
+
+/** 정적 생성할 공개 글의 slug 목록 */
+export async function getPublicPostSlugs() {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CONTENT_CACHE_TAG);
+
+  const rows = await getDb().select({ slug: posts.slug }).from(posts).where(isPublic);
+  return rows.map((row) => row.slug);
+}
+
+export type SeriesNeighbor = { slug: string; title: string };
+
+export type PostDetail = PostListItem & {
+  html: string;
+  toc: TocItem[];
+  updatedAt: Date;
+  series: {
+    slug: string;
+    name: string;
+    order: number;
+    publicCount: number;
+    prev: SeriesNeighbor | null;
+    next: SeriesNeighbor | null;
+  } | null;
+};
+
+/** 공개된 글의 상세. 공개되지 않은 글(초안, 예약, 없는 slug)은 null입니다. 본문 렌더링도 캐시에 포함됩니다. */
+export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CONTENT_CACHE_TAG, `post:${slug}`);
+
+  const post = await getDb().query.posts.findFirst({
+    where: and(eq(posts.slug, slug), isPublic),
+    columns: {
+      slug: true,
+      title: true,
+      summary: true,
+      contentHtml: true,
+      publishedAt: true,
+      updatedAt: true,
+      seriesId: true,
+      seriesOrder: true,
+    },
+    with: {
+      series: { columns: { slug: true, name: true } },
+      postTags: { with: { tag: { columns: { slug: true, name: true } } } },
+    },
+  });
+  if (!post) return null;
+
+  let seriesInfo: PostDetail["series"] = null;
+  if (post.series && post.seriesId !== null && post.seriesOrder !== null) {
+    // 같은 시리즈의 공개된 글만 순서대로 가져와 이전·다음 글을 정합니다 (초안·예약 글로 가는 링크 방지).
+    const siblings = await getDb()
+      .select({ slug: posts.slug, title: posts.title, order: posts.seriesOrder })
+      .from(posts)
+      .where(and(eq(posts.seriesId, post.seriesId), isPublic))
+      .orderBy(asc(posts.seriesOrder));
+    const position = siblings.findIndex((sibling) => sibling.slug === post.slug);
+    const pick = (i: number) =>
+      siblings[i] ? { slug: siblings[i].slug, title: siblings[i].title } : null;
+    seriesInfo = {
+      slug: post.series.slug,
+      name: post.series.name,
+      order: position + 1,
+      publicCount: siblings.length,
+      prev: pick(position - 1),
+      next: pick(position + 1),
+    };
+  }
+
+  const { html, toc } = await renderPostHtml(post.contentHtml);
+
+  return {
+    slug: post.slug,
+    title: post.title,
+    summary: post.summary,
+    publishedAt: post.publishedAt!,
+    updatedAt: post.updatedAt,
+    tags: post.postTags.map((link) => link.tag).sort((a, b) => a.name.localeCompare(b.name, "ko")),
+    html,
+    toc,
+    series: seriesInfo,
+  };
 }
