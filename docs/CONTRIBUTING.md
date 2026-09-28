@@ -67,10 +67,22 @@ chore/2-workflow  ─┘
 
 `dev`에 모인 변경을 운영에 반영할 때 진행합니다.
 
-1. 사용자가 릴리스를 지시하면, Claude가 `dev` → `main` PR을 만듭니다. 제목은 `release: <요약>`, 본문에는 포함된 PR 목록을 적습니다.
+1. 사용자가 릴리스를 지시하면, Claude가 `dev` → `main` PR을 만들고 `release` 라벨을 붙입니다. 제목은 `release: vX.Y.Z — <요약>`, 본문에는 포함된 PR 목록을 적습니다.
 2. CI와 Vercel 미리보기를 확인합니다.
-3. 사용자가 **Create a merge commit**으로 머지합니다. Squash하면 `dev`와 `main`의 이력이 어긋나 다음 릴리스에서 충돌이 생기므로 사용하지 않습니다.
-4. 머지되면 Claude가 `main`의 머지 커밋에 버전 태그를 붙이고 GitHub Release를 만듭니다. 릴리스 노트는 포함된 PR을 라벨별로 자동 분류합니다(`.github/release.yml`).
+   - 릴리스 PR은 **AI 리뷰를 다시 받지 않습니다.** 포함된 PR은 모두 `dev`에 머지되기 전에 필요한 리뷰를 거쳤고, 릴리스 PR에서 새로 생기는 코드는 없습니다. CodeRabbit과 Gemini도 `dev` 대상 PR만 리뷰하도록 설정되어 있습니다.
+   - 단, `main`에만 있는 커밋이 있어 충돌을 해결했다면 그 해결 내용은 리뷰 대상입니다.
+3. 사용자가 **Create a merge commit**으로 머지합니다. Squash하면 `dev`와 `main`의 이력이 어긋나 다음 릴리스에서 충돌이 생기므로 사용하지 않습니다. 머지 커밋 메시지는 다음 형식을 따릅니다.
+
+   ```
+   release: vX.Y.Z — <요약> (#<릴리스 PR 번호>)
+
+   - <포함된 PR 제목> (#<번호>)
+   - ...
+   ```
+
+4. 머지되면 Claude가 `main`의 머지 커밋에 annotated 태그(`vX.Y.Z`)를 붙이고 GitHub Release를 만듭니다.
+   - 릴리스 노트: 맨 위에 이번 릴리스의 **하이라이트** 요약을 쓰고, 그 아래에 자동 생성 목록을 붙입니다. 자동 목록은 PR을 라벨별로 분류하며(`.github/release.yml`), `release` 라벨이 붙은 릴리스 PR 자신은 제외됩니다.
+   - 운영 도메인에 배포된 커밋이 태그와 같은지 확인합니다.
 
 ### 버전
 
@@ -152,3 +164,4 @@ chore/2-workflow  ─┘
 | `performance`   | 성능 측정, 최적화                |
 | `accessibility` | 접근성                           |
 | `design`        | 화면 설계, 디자인 시스템         |
+| `release`       | `dev` → `main` 릴리스 PR         |

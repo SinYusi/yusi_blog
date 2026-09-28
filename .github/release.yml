@@ -1,5 +1,8 @@
 # GitHub Release 노트 자동 생성 시 PR을 라벨별로 분류합니다.
 changelog:
+  exclude:
+    # 릴리스 PR(dev → main) 자신은 노트에서 뺍니다.
+    labels: [release]
   categories:
     - title: 기능
       labels: [enhancement]
