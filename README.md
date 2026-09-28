@@ -35,6 +35,8 @@
 
 ```bash
 pnpm install
+cp .env.example .env.local   # Neon dev 브랜치의 연결 문자열로 채우기
+pnpm db:check                # DB 연결 확인
 pnpm dev
 ```
 
