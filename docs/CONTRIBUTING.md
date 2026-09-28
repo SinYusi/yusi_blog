@@ -42,8 +42,8 @@ chore/2-workflow  ─┘
 2. **브랜치 생성:** 최신 `dev`에서 이슈 번호를 포함한 브랜치를 만듭니다.
 3. **작업:** 작업 단위마다 커밋합니다. 커밋하기 전에 `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`를 통과시킵니다.
 4. **PR 생성:** `dev`를 대상으로 PR을 만듭니다. PR 템플릿을 채우고, 본문에 `Closes #이슈번호`를 넣어 머지되면 이슈가 자동으로 닫히게 합니다.
-5. **AI 리뷰:** PR을 열면 CodeRabbit과 Gemini가 자동으로 리뷰합니다. 리뷰가 달리지 않거나 다시 받아야 하면 코멘트로 요청합니다.
-   - CodeRabbit: `@coderabbitai review` (무료 플랜은 시간당 1회)
+5. **AI 리뷰:** PR을 열면 CodeRabbit과 Gemini가 자동으로 리뷰합니다. 이후 push에는 자동 리뷰가 실행되지 않으므로(CodeRabbit 한도 절약), 리뷰가 달리지 않거나 다시 받아야 하면 코멘트로 요청합니다.
+   - CodeRabbit: `@coderabbitai review` (무료 플랜은 시간당 1회). 설정은 `.coderabbit.yaml`: 한국어, 원인과 근거 중심 설명, 리뷰 중점(성능, 접근성, 디자인 토큰 준수), PR 제목 형식 검사(실패 시 에러), 이슈 반영도 평가(경고)
    - Gemini: `@gemini-cli /review` (뒤에 중점 사항을 덧붙일 수 있음)
 
    CodeRabbit은 시간당 1회로 제한되므로, 변경 범위에 따라 머지 전에 필요한 리뷰를 구분합니다.
