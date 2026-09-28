@@ -48,6 +48,9 @@
 | `meta`    | 13 / 400 mono | 날짜, 태그          |
 | `caption` | 12 / 400      | 보조 라벨           |
 
+- 한글은 단어 단위로 줄바꿈합니다(`word-break: keep-all`). 긴 영문·URL은 넘치지 않도록 끊습니다(`overflow-wrap: break-word`).
+- 한글 폰트는 preload하지 않습니다. 수백 개의 unicode-range 조각 중 페이지에 쓰인 글자의 조각만 받게 하기 위해서입니다 (성과 기록: 폰트 전송량 −87%).
+
 글자 크기는 `text-display`, `text-h1` … `text-caption` 유틸리티로 쓰며, 줄 간격·자간·굵기가 함께 적용됩니다. display, h1, h2, h3, body-lg는 `clamp()`로 화면 너비에 따라 연속으로 바뀝니다.
 
 ## 3. 간격 · 모서리

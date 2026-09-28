@@ -124,6 +124,9 @@
   body {
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    /* 한글은 기본적으로 글자 단위로 줄바꿈되므로 단어 단위로 바꾸고, 긴 영문·URL은 넘치지 않게 끊습니다. */
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   :focus-visible {
