@@ -137,7 +137,8 @@ chore/2-workflow  ─┘
 
 - slug 기준으로 갱신·추가하므로 여러 번 실행해도 결과가 같고, 전체가 하나의 트랜잭션으로 실행됩니다.
 - PR 미리보기 빌드에서는 마이그레이션 뒤에 자동으로 실행됩니다 (`--preview-only`). 미리보기 DB는 운영 DB를 복제하므로, 시드가 없으면 화면이 비어 있기 때문입니다.
-- 운영 환경(`VERCEL_ENV=production`)에서는 실행을 거부합니다.
+- 운영 환경(`VERCEL_ENV=production`)에서는 실행을 거부합니다. 운영 빌드의 `--preview-only` 호출은 거부 전에 건너뜁니다.
+- 로컬에서는 `.env.local`의 `SEED_ALLOWED_ENDPOINT`와 `DATABASE_URL`의 Neon 엔드포인트가 같을 때만 실행합니다. `.env.local`이 실수로 운영 DB를 가리켜도 운영 글을 덮어쓰지 않기 위해서입니다. 엔드포인트 ID는 `pnpm db:check`로 확인합니다.
 - 본문 HTML 규칙(코드 블록, 콜아웃 등)은 `seed-data.ts` 상단 주석을 따릅니다.
 
 지켜야 할 것:

@@ -9,18 +9,20 @@
 import { inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 
+import { getEndpointId } from "@/db/connection-urls";
 import { posts, postTags, series, tags } from "@/db/schema";
 import { seedPosts, seedSeries, seedTags } from "@/db/seed-data";
 
 const vercelEnv = process.env.VERCEL_ENV;
 
-if (vercelEnv === "production") {
-  console.error("운영 환경(VERCEL_ENV=production)에서는 시드를 실행하지 않습니다.");
-  process.exit(1);
-}
+// 운영 빌드도 vercel-build에서 --preview-only로 호출하므로, 건너뛰기 검사를 운영 거부보다 먼저 합니다.
 if (process.argv.includes("--preview-only") && vercelEnv !== "preview") {
   console.log(`미리보기 환경이 아니므로 시드를 건너뜁니다 (VERCEL_ENV=${vercelEnv ?? "없음"}).`);
   process.exit(0);
+}
+if (vercelEnv === "production") {
+  console.error("운영 환경(VERCEL_ENV=production)에서는 시드를 실행하지 않습니다.");
+  process.exit(1);
 }
 
 const url = process.env.DATABASE_URL;
@@ -29,8 +31,22 @@ if (!url) {
   process.exit(1);
 }
 
+/*
+ * 쓰기 전에 대상 DB를 확인합니다. 미리보기 빌드는 Neon 연동이 PR마다 만든 브랜치를 가리키므로 허용하고,
+ * 그 밖(로컬)에서는 SEED_ALLOWED_ENDPOINT에 적은 엔드포인트(Neon dev 브랜치)일 때만 실행합니다.
+ * .env.local이 실수로 운영 DB를 가리켜도 운영 글을 덮어쓰지 않게 합니다.
+ */
+const endpoint = getEndpointId(url);
+if (vercelEnv !== "preview" && endpoint !== process.env.SEED_ALLOWED_ENDPOINT) {
+  console.error(
+    `시드 대상 ${endpoint}이(가) SEED_ALLOWED_ENDPOINT와 다릅니다. ` +
+      "Neon dev 브랜치가 맞는지 pnpm db:check로 확인한 뒤 .env.local의 SEED_ALLOWED_ENDPOINT에 적으세요.",
+  );
+  process.exit(1);
+}
+
 const db = drizzle({ connection: url });
-console.log(`시드 대상: ${new URL(url).hostname}`);
+console.log(`시드 대상: ${endpoint} (${new URL(url).hostname})`);
 
 const seriesIdBySlug = (slug: string) =>
   sql`(select ${series.id} from ${series} where ${series.slug} = ${slug})`;
