@@ -1,0 +1,17 @@
+# GitHub Release 노트 자동 생성 시 PR을 라벨별로 분류합니다.
+changelog:
+  categories:
+    - title: 기능
+      labels: [enhancement]
+    - title: 버그 수정
+      labels: [bug]
+    - title: 성능
+      labels: [performance]
+    - title: 디자인
+      labels: [design]
+    - title: 접근성
+      labels: [accessibility]
+    - title: 문서
+      labels: [documentation]
+    - title: 기타
+      labels: ["*"]
