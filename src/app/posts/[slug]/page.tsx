@@ -5,8 +5,9 @@ import { CodeCopy } from "@/components/post/code-copy";
 import { SeriesNav } from "@/components/post/series-nav";
 import { TableOfContents } from "@/components/post/table-of-contents";
 import { TagList } from "@/components/posts/tag-list";
-import { getPostBySlug, getPublicPostSlugs } from "@/lib/content/posts";
+import { getPostBySlug, getPublicPostSlugs, type PostDetail } from "@/lib/content/posts";
 import { formatDate } from "@/lib/format";
+import { SITE_AUTHOR, SITE_NAME, absoluteUrl, pageMetadata, postPath } from "@/lib/site";
 
 /*
  * 공개된 글을 빌드 시 모두 정적 생성합니다. Cache Components 모드에서는 최소 하나를 반환해야 하므로,
@@ -20,7 +21,45 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/posts/[slug]">): Promise<Metadata> {
   const post = await getPostBySlug((await params).slug);
   if (!post) return {};
-  return { title: post.title, description: post.summary || undefined };
+  return pageMetadata({
+    title: post.title,
+    description: post.summary || undefined,
+    path: postPath(post.slug),
+    openGraph: {
+      type: "article",
+      publishedTime: post.publishedAt.toISOString(),
+      modifiedTime: post.modifiedAt.toISOString(),
+      authors: [SITE_AUTHOR.url],
+      tags: post.tags.map((tag) => tag.name),
+    },
+  });
+}
+
+/** 검색 엔진용 구조화 데이터 (schema.org BlogPosting) */
+function PostJsonLd({ post }: { post: PostDetail }) {
+  const url = absoluteUrl(postPath(post.slug));
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    ...(post.summary && { description: post.summary }),
+    url,
+    mainEntityOfPage: url,
+    datePublished: post.publishedAt.toISOString(),
+    dateModified: post.modifiedAt.toISOString(),
+    inLanguage: "ko-KR",
+    author: { "@type": "Person", name: SITE_AUTHOR.name, url: SITE_AUTHOR.url },
+    isPartOf: { "@type": "Blog", name: SITE_NAME, url: absoluteUrl("/") },
+    ...(post.tags.length > 0 && { keywords: post.tags.map((tag) => tag.name) }),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      // 제목·요약에 </script>가 들어가도 스크립트가 끝나지 않도록 <를 이스케이프합니다.
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+    />
+  );
 }
 
 export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
@@ -31,6 +70,7 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
 
   return (
     <div className="grid grid-cols-1 gap-x-6 pt-8 pb-16 md:pt-12 lg:grid-cols-12 lg:pt-16">
+      <PostJsonLd post={post} />
       <article className="min-w-0 lg:col-span-8">
         <header className="border-b border-border pb-6 md:pb-8">
           {post.series && (

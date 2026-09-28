@@ -116,12 +116,35 @@ export async function getPublicPostSlugs() {
   return (await getPublicPostList()).map((post) => post.slug);
 }
 
+/** sitemap용 공개 글 목록. 수정 시각은 발행 전에 고친 글(예약 발행)도 있으므로 발행 시각보다 앞서지 않게 맞춥니다. */
+export async function getSitemapPosts() {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CONTENT_CACHE_TAG);
+
+  const rows = await getDb()
+    .select({ slug: posts.slug, publishedAt: posts.publishedAt, updatedAt: posts.updatedAt })
+    .from(posts)
+    .where(isPublic)
+    .orderBy(desc(posts.publishedAt));
+  return rows.map((row) => ({
+    slug: row.slug,
+    publishedAt: row.publishedAt!,
+    modifiedAt: latestOf(row.publishedAt!, row.updatedAt),
+  }));
+}
+
+function latestOf(a: Date, b: Date) {
+  return a > b ? a : b;
+}
+
 export type SeriesNeighbor = { slug: string; title: string };
 
 export type PostDetail = PostListItem & {
   html: string;
   toc: TocItem[];
-  updatedAt: Date;
+  /** 발행 시각과 수정 시각 중 늦은 쪽 (JSON-LD dateModified, og:article:modified_time) */
+  modifiedAt: Date;
   series: {
     slug: string;
     name: string;
@@ -190,7 +213,7 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
     title: post.title,
     summary: post.summary,
     publishedAt: post.publishedAt!,
-    updatedAt: post.updatedAt,
+    modifiedAt: latestOf(post.publishedAt!, post.updatedAt),
     tags: post.postTags.map((link) => link.tag).sort((a, b) => a.name.localeCompare(b.name, "ko")),
     html,
     toc,
