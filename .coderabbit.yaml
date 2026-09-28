@@ -21,6 +21,8 @@ reviews:
   review_status: true
   sequence_diagrams: true
   estimate_code_review_effort: true
+  # 이슈 반영도는 머지 전 검사(issue_assessment)에서 보므로 요약에서는 중복을 뺍니다.
+  assess_linked_issues: false
   related_issues: false
   related_prs: false
   suggested_labels: false
