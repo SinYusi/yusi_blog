@@ -11,6 +11,7 @@
 | [0002](0002-self-hosted-cms.md)   | 자체 CMS와 PostgreSQL로 콘텐츠 관리 | 승인 |
 | [0003](0003-ai-code-review.md)    | AI 코드 리뷰를 PR 흐름에 도입       | 승인 |
 | [0004](0004-design-direction.md)  | 디자인 방향: 터미널 블루            | 승인 |
+| [0005](0005-neon-postgres.md)     | DB 호스팅: Neon                     | 승인 |
 
 ## 작성 방법
 
