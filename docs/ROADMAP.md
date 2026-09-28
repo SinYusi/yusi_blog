@@ -2,7 +2,7 @@
 
 > 상태: ⬜ 예정 · 🟨 진행 중 · ✅ 완료
 
-## 0단계: 기반 🟨
+## 0단계: 기반 ✅
 
 - [x] Next.js 프로젝트 생성 (App Router, TypeScript, Tailwind, pnpm)
 - [x] GitHub 저장소 연결
@@ -10,8 +10,10 @@
 - [x] Prettier, ESLint 규칙 정리
 - [x] GitHub Actions CI (포맷, lint, 타입 체크, 빌드)
 - [x] AI 코드 리뷰 도입 (CodeRabbit, Gemini API)
-- [ ] Vercel 배포 연결
-- [ ] 디자인 토큰 (색상, 타이포그래피, 간격) 정의
+- [x] 작업 흐름 정의 (dev 브랜치, 릴리스 규칙), 이슈/PR 템플릿
+- [x] Vercel 배포 연결 (운영: main, 미리보기: 그 외 브랜치)
+- [x] 화면 설계: 전체 화면 시안, 반응형 규칙, 컴포넌트 목록 (docs/DESIGN.md)
+- [x] 디자인 토큰 구현 (색상, 타이포그래피, 간격, 다크/라이트 테마, 색 대비 CI 검사)
 
 **완료 기준:** main 브랜치에 push하면 CI를 통과한 뒤 자동 배포된다.
 

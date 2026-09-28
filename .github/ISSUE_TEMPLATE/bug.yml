@@ -1,0 +1,42 @@
+name: 버그
+description: 의도와 다르게 동작하는 문제
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 현상
+      description: 무엇이 잘못 동작하는가?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 발생 환경
+      multiple: true
+      options:
+        - 로컬 개발 환경
+        - Vercel 미리보기
+        - 운영 환경
+        - CI
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그 / 스크린샷
+      description: 에러 메시지, 콘솔 로그, 스크린샷 등

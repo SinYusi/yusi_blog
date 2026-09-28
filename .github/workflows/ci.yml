@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -32,6 +32,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Color contrast
+        run: pnpm check:contrast
 
       - name: Typecheck
         run: pnpm typecheck

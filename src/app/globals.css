@@ -1,26 +1,144 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * 디자인 토큰. 값의 기준은 docs/DESIGN.md이며, 색 대비는 scripts/check-contrast.mjs가 CI에서 검사합니다.
+ *
+ * 테마는 <html data-theme="dark|light">로 전환합니다. 색은 CSS 변수로 두고 @theme inline으로
+ * Tailwind 유틸리티(bg-surface, text-muted 등)에 연결하므로, 요소 단위로 data-theme을 바꿔도 적용됩니다.
+ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1320;
+  --surface: #151c2e;
+  --code: #0a0e18;
+  --border: #263049;
+  --border-strong: #36415c;
+  --fg: #e3e8f2;
+  --fg-secondary: #b3bdd3;
+  --fg-article: #cdd5e5;
+  --muted: #8f9bb5;
+  --accent: #6cb6ff;
+  --accent-hover: #a3d2ff;
+  --date: #f2b134;
+  --danger: #f28b82;
+  --success: #7fd8a4;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f8fc;
+  --surface: #ffffff;
+  --code: #eef2f8;
+  --border: #dbe1ec;
+  --border-strong: #c5cedd;
+  --fg: #141a2a;
+  --fg-secondary: #3a4459;
+  --fg-article: #2a3246;
+  --muted: #55617a;
+  --accent: #1b64c8;
+  --accent-hover: #0f5fc4;
+  --date: #9a6200;
+  --danger: #c0392b;
+  --success: #1e7a4c;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* 프로젝트 토큰 밖의 값을 쓰지 않도록 Tailwind 기본값을 비웁니다. */
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --breakpoint-*: initial;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-code: var(--code);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-article: var(--fg-article);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-date: var(--date);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
+  --font-sans: var(--font-plex-sans-kr), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  /* 제목은 화면 너비에 따라 연속으로 조정합니다 (예: h1 모바일 26 → 태블릿 34 → 데스크톱 44). */
+  --text-display: clamp(2rem, 1.25rem + 2.8vw, 3.5rem);
+  --text-display--line-height: 1.3;
+  --text-display--letter-spacing: -0.027em;
+  --text-display--font-weight: 700;
+  --text-h1: clamp(1.625rem, 1.1rem + 2.2vw, 2.75rem);
+  --text-h1--line-height: 1.35;
+  --text-h1--letter-spacing: -0.027em;
+  --text-h1--font-weight: 700;
+  --text-h2: clamp(1.3125rem, 1.05rem + 1.1vw, 1.75rem);
+  --text-h2--line-height: 1.4;
+  --text-h2--letter-spacing: -0.018em;
+  --text-h2--font-weight: 700;
+  --text-h3: clamp(1.125rem, 1rem + 0.45vw, 1.3125rem);
+  --text-h3--line-height: 1.5;
+  --text-h3--letter-spacing: -0.01em;
+  --text-h3--font-weight: 600;
+  --text-body-lg: clamp(1rem, 0.9rem + 0.3vw, 1.125rem);
+  --text-body-lg--line-height: 1.9;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.75;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.5;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.5;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+
+  /* 모바일 ~767 / 태블릿 md 768~1023 / 데스크톱 lg 1024~ */
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+
+  --container-article: 42.5rem;
+  --container-content: 68rem;
+}
+
+@layer base {
+  html {
+    background-color: var(--bg);
+    color: var(--fg);
+    -webkit-text-size-adjust: 100%;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-hover);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  mark {
+    background-color: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: inherit;
+    border-radius: var(--radius-sm);
+    padding: 0 2px;
+  }
 }
