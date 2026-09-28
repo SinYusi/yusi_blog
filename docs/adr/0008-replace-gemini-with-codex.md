@@ -28,7 +28,7 @@ Gemini 리뷰 워크플로를 제거하고 Codex 코드 리뷰를 두 번째 리
 
 ## 결과
 
-- `.github/workflows/gemini-review.yml`, `.github/gemini-review/`를 삭제하고, 저장소 secret `GEMINI_API_KEY`와 변수 `GEMINI_MODEL`도 지운다.
+- `.github/workflows/gemini-review.yml`, `.github/gemini-review/`를 삭제하고, 저장소 secret `GEMINI_API_KEY`와 변수 `GEMINI_MODEL`도 삭제했다.
 - 머지 전 필수 리뷰는 코드 변경이면 CodeRabbit + Codex, 문서만 바꾸면 Codex다 (docs/CONTRIBUTING.md 5단계).
 - Codex 사용량은 ChatGPT 요금제에 따라 달라지고 저장소에서 확인할 수 없다. 한도에 걸리면 CodeRabbit 리뷰만으로 진행하고, PR에 그 사실을 남긴다.
 - 리뷰 워크플로를 직접 만든 경험(구조화된 출력, 줄 번호 검증, 재시도)은 ADR-0003과 커밋 이력에 남는다.
