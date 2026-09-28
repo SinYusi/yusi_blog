@@ -6,7 +6,7 @@
  * - 로컬: pnpm db:seed (.env.local의 dev 브랜치)
  * - Vercel 미리보기 빌드: tsx scripts/seed.mts --preview-only (미리보기 환경에서만 실행, 그 외에는 건너뜀)
  */
-import { inArray, sql } from "drizzle-orm";
+import { count, inArray, notInArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 
 import { getEndpointId } from "@/db/connection-urls";
@@ -63,6 +63,23 @@ console.log(`시드 대상: ${endpoint} (${new URL(url).hostname})`);
 const seriesIdBySlug = (slug: string) =>
   sql`(select ${series.id} from ${series} where ${series.slug} = ${slug})`;
 const seededSlugs = seedPosts.map((post) => post.slug);
+
+/*
+ * 미리보기 DB는 운영 DB를 복제합니다. 운영에 실제 글이 생긴 뒤에는 시드가 필요 없고, 시드 글과 실제 글의
+ * 시리즈 순번이 겹치면 고유 제약 위반으로 빌드가 실패할 수 있으므로, 시드가 아닌 글이 있으면 건너뜁니다.
+ */
+if (vercelEnv === "preview") {
+  const [{ existing }] = await db
+    .select({ existing: count() })
+    .from(posts)
+    .where(notInArray(posts.slug, seededSlugs));
+  if (existing > 0) {
+    console.log(
+      `시드가 아닌 글 ${existing}개가 있어 미리보기 시드를 건너뜁니다 (운영 데이터 복제본).`,
+    );
+    process.exit(0);
+  }
+}
 
 await db.batch([
   db
