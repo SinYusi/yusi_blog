@@ -37,6 +37,7 @@
 pnpm install
 cp .env.example .env.local   # Neon dev 브랜치의 연결 문자열로 채우기
 pnpm db:check                # DB 연결 확인
+pnpm db:migrate && pnpm db:seed   # 스키마 적용, 개발용 데이터
 pnpm dev
 ```
 
