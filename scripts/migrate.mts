@@ -12,7 +12,13 @@ import { Client } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { migrate } from "drizzle-orm/neon-serverless/migrator";
 
-import { getEndpointId, getMigrationUrl } from "../src/db/connection-urls";
+import {
+  findTargetMismatch,
+  getAppUrl,
+  getDatabaseName,
+  getEndpointId,
+  getMigrationUrl,
+} from "../src/db/connection-urls";
 
 // hashtext('yusi_blog:migrations')와 같은 목적의 고정 키. 이 저장소의 마이그레이션만 이 키로 잠급니다.
 const LOCK_KEY = 7_210_417_231;
@@ -24,9 +30,19 @@ if (!url) {
   process.exit(1);
 }
 
+// 배포 빌드는 db:check를 거치지 않으므로, 연결하기 전에 여기서 대상 일치를 직접 확인합니다.
+const appUrl = getAppUrl();
+const mismatch = appUrl ? findTargetMismatch(appUrl, url) : null;
+if (mismatch) {
+  console.error(`✗ ${mismatch}`);
+  process.exit(1);
+}
+
 const client = new Client(url);
 await client.connect();
-console.log(`마이그레이션 대상: ${getEndpointId(url)} (${migrationsFolder})`);
+console.log(
+  `마이그레이션 대상: ${getEndpointId(url)}/${getDatabaseName(url)} (${migrationsFolder})`,
+);
 
 try {
   const started = Date.now();

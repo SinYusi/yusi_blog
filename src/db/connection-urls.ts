@@ -25,3 +25,21 @@ export function getMigrationUrl(env: Env = process.env) {
 export function getEndpointId(url: string) {
   return new URL(url).hostname.split(".")[0].replace(/-pooler$/, "");
 }
+
+/** URL 경로의 데이터베이스 이름 (예: /neondb → neondb) */
+export function getDatabaseName(url: string) {
+  return decodeURIComponent(new URL(url).pathname.replace(/^\//, ""));
+}
+
+/**
+ * 앱 쿼리 대상과 마이그레이션 대상이 같은 DB(엔드포인트 + 데이터베이스 이름)인지 확인합니다.
+ * 다르면 이유를 담은 메시지를, 같으면 null을 반환합니다. 확인한 DB와 실제로 마이그레이션되는 DB가
+ * 달라지는 일을 막기 위해 db:check와 마이그레이션 스크립트가 모두 이 검사를 거칩니다.
+ */
+export function findTargetMismatch(appUrl: string, migrationUrl: string) {
+  const app = `${getEndpointId(appUrl)}/${getDatabaseName(appUrl)}`;
+  const migration = `${getEndpointId(migrationUrl)}/${getDatabaseName(migrationUrl)}`;
+  return app === migration
+    ? null
+    : `앱 쿼리 대상(${app})과 마이그레이션 대상(${migration})이 서로 다른 DB입니다. DATABASE_URL과 DATABASE_URL_UNPOOLED가 같은 Neon 브랜치·데이터베이스를 가리키는지 확인하세요.`;
+}
