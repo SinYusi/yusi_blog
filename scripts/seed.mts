@@ -70,12 +70,24 @@ await db.batch([
     .values(seedSeries.map((s) => ({ ...s })))
     .onConflictDoUpdate({
       target: series.slug,
-      set: { name: sql`excluded.name`, description: sql`excluded.description` },
+      set: {
+        name: sql`excluded.name`,
+        description: sql`excluded.description`,
+        // 글과 같이, 내용이 바뀐 경우에만 수정 시각을 갱신합니다 (스키마의 $onUpdate 대신).
+        updatedAt: sql`case when (${series.name}, ${series.description}) is distinct from (excluded.name, excluded.description)
+          then now() else ${series.updatedAt} end`,
+      },
     }),
   db
     .insert(tags)
     .values(seedTags.map((t) => ({ ...t })))
-    .onConflictDoUpdate({ target: tags.slug, set: { name: sql`excluded.name` } }),
+    .onConflictDoUpdate({
+      target: tags.slug,
+      set: {
+        name: sql`excluded.name`,
+        updatedAt: sql`case when ${tags.name} is distinct from excluded.name then now() else ${tags.updatedAt} end`,
+      },
+    }),
   // 시리즈 순번 고유 제약과 부딪히지 않도록, 시드 글의 시리즈 연결을 먼저 풀고 다시 넣습니다.
   db
     .update(posts)
