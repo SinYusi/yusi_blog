@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "tsx scripts/migrate.mts && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
@@ -12,9 +13,9 @@
     "format:check": "prettier --check .",
     "check:contrast": "node scripts/check-contrast.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.mts",
     "db:studio": "drizzle-kit studio",
-    "db:check": "node --env-file-if-exists=.env.local scripts/db-check.mts"
+    "db:check": "tsx --env-file-if-exists=.env.local scripts/db-check.mts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -37,6 +38,7 @@
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "packageManager": "pnpm@10.33.0",
