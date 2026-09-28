@@ -1,28 +1,78 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# 설정 배경과 선택 이유는 docs/CONTRIBUTING.md의 AI 리뷰 규칙을 참고합니다.
 language: ko-KR
+tone_instructions: >-
+  모든 리뷰, 요약(Merge Risk, 보안 검토 포함), 답글을 한국어로 작성합니다.
+  지적마다 무엇이 왜 문제인지, 어떤 상황에서 문제가 되는지 근거를 들어 간결하게 설명합니다.
+
 reviews:
   profile: chill
   request_changes_workflow: false
+
+  # 무료 플랜은 시간당 1회라, PR을 열 때만 자동 리뷰하고 재리뷰는 @coderabbitai review로 요청합니다.
+  auto_review:
+    enabled: true
+    auto_incremental_review: false
+    drafts: false
+
+  # 리뷰 요약(walkthrough) 구성
   high_level_summary: true
   poem: false
   review_status: true
-  auto_review:
-    enabled: true
-    drafts: false
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
+
+  pre_merge_checks:
+    title:
+      mode: error
+      requirements: >-
+        Conventional Commits 형식 `<type>(<scope>): <요약>`을 따라야 합니다.
+        type은 feat, fix, perf, refactor, test, docs, chore, ci, release 중 하나이고 scope는 선택입니다.
+        요약은 한국어로 씁니다. 릴리스 PR은 `release: vX.Y.Z — <요약>` 형식입니다.
+    issue_assessment:
+      mode: warning
+    description:
+      mode: "off"
+    docstrings:
+      mode: "off"
+
   path_filters:
     - "!pnpm-lock.yaml"
     - "!next-env.d.ts"
+
   path_instructions:
     - path: "src/**/*.{ts,tsx}"
       instructions: >-
-        Next.js App Router 프로젝트입니다. 서버/클라이언트 컴포넌트 경계, 불필요한 "use client",
-        Core Web Vitals(LCP, CLS, INP)에 영향을 주는 코드, 접근성(시맨틱 마크업, ARIA, 키보드 조작),
-        타입 안전성을 중점적으로 확인해 주세요.
+        Next.js App Router 프로젝트입니다. 다음을 중점적으로 확인해 주세요.
+        성능: 서버/클라이언트 컴포넌트 경계, 불필요한 "use client"와 클라이언트 번들 증가,
+        LCP·CLS·INP에 영향을 주는 코드(이미지 크기 미지정, 레이아웃 이동, 무거운 이벤트 처리).
+        접근성: 시맨틱 마크업, 키보드 조작, 포커스 표시, 아이콘 버튼의 접근 가능한 이름, ARIA 오용.
+        디자인 토큰: 색·글자 크기·모서리·너비 구간에 임의 값(예: text-[#fff], p-[13px]) 대신
+        docs/DESIGN.md의 토큰 유틸리티를 쓰는지.
+    - path: "src/**/*.css"
+      instructions: >-
+        디자인 토큰의 기준 파일입니다. docs/DESIGN.md의 값과 일치하는지, 새 색을 추가했다면
+        scripts/check-contrast.mjs의 검사 조합에도 추가했는지 확인해 주세요.
     - path: "docs/**/*.md"
       instructions: >-
-        프로젝트 스펙과 기술 결정 기록입니다. 문서 간 내용이 서로 모순되지 않는지 확인해 주세요.
-    - path: ".github/workflows/**"
+        프로젝트 스펙과 기술 결정 기록입니다. 문서 간 내용이 서로 모순되지 않는지, 코드와 어긋나지 않는지 확인해 주세요.
+    - path: ".github/**"
       instructions: >-
         권한 최소화, 시크릿 노출, 스크립트 인젝션 위험을 확인해 주세요.
+
+  tools:
+    # 한국어 문서에서 오탐이 많아 끕니다. 문서 구조는 markdownlint로 확인합니다.
+    languagetool:
+      enabled: false
+
+knowledge_base:
+  learnings:
+    scope: local
+
 chat:
   auto_reply: true
