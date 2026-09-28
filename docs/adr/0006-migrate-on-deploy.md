@@ -15,7 +15,7 @@
 
 ## 결정
 
-배포 빌드 단계에서 적용한다. `package.json`의 `vercel-build` 스크립트(`tsx scripts/migrate.mts && next build`)를 Vercel이 기본 빌드 명령 대신 실행한다.
+배포 빌드 단계에서 적용한다. `package.json`의 `vercel-build` 스크립트(`tsx scripts/migrate.mts && next build`)를 빌드 명령으로 쓴다. Vercel이 `vercel-build`를 기본 빌드 명령보다 우선하는 동작에 기대지 않도록 `vercel.json`의 `buildCommand`에 `pnpm vercel-build`를 명시한다.
 
 - **미리보기에서 먼저 검증된다.** Neon 연동이 PR 미리보기마다 운영 DB를 복제한 브랜치를 만들고, 그 빌드에서 마이그레이션이 적용된다. 운영 데이터 복제본 위에서 마이그레이션이 한 번 실행된 뒤에야 머지·릴리스된다.
 - **적용을 잊을 수 없다.** 운영 배포(`main`)에서도 같은 명령이 실행된다.

@@ -32,7 +32,11 @@ if (!url) {
 
 // 배포 빌드는 db:check를 거치지 않으므로, 연결하기 전에 여기서 대상 일치를 직접 확인합니다.
 const appUrl = getAppUrl();
-const mismatch = appUrl ? findTargetMismatch(appUrl, url) : null;
+if (!appUrl) {
+  console.error("DATABASE_URL이 없습니다. .env.example을 참고해 .env.local을 만드세요.");
+  process.exit(1);
+}
+const mismatch = findTargetMismatch(appUrl, url);
 if (mismatch) {
   console.error(`✗ ${mismatch}`);
   process.exit(1);
