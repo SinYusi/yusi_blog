@@ -32,12 +32,24 @@ if (!url) {
 }
 
 /*
- * 쓰기 전에 대상 DB를 확인합니다. 미리보기 빌드는 Neon 연동이 PR마다 만든 브랜치를 가리키므로 허용하고,
- * 그 밖(로컬)에서는 SEED_ALLOWED_ENDPOINT에 적은 엔드포인트(Neon dev 브랜치)일 때만 실행합니다.
- * .env.local이 실수로 운영 DB를 가리켜도 운영 글을 덮어쓰지 않게 합니다.
+ * 쓰기 전에 대상 DB를 확인합니다. .env.local이나 미리보기 환경 변수가 실수로 운영 DB를 가리켜도
+ * 운영 글을 덮어쓰지 않게 합니다. 운영 엔드포인트 ID는 공개 저장소에 두지 않고 환경 변수로 받습니다.
+ * - 미리보기 빌드: PR마다 새 DB 브랜치가 생겨 허용 목록을 둘 수 없으므로, Vercel 미리보기 환경 변수
+ *   SEED_BLOCKED_ENDPOINT(운영 엔드포인트)와 다른지 확인합니다. 값이 없으면 확인할 수 없으므로 중단합니다.
+ * - 로컬: SEED_ALLOWED_ENDPOINT에 적은 엔드포인트(Neon dev 브랜치)일 때만 실행합니다.
  */
 const endpoint = getEndpointId(url);
-if (vercelEnv !== "preview" && endpoint !== process.env.SEED_ALLOWED_ENDPOINT) {
+if (vercelEnv === "preview") {
+  const blocked = process.env.SEED_BLOCKED_ENDPOINT;
+  if (!blocked || endpoint === blocked) {
+    console.error(
+      blocked
+        ? `시드 대상 ${endpoint}이(가) 운영 DB(SEED_BLOCKED_ENDPOINT)입니다.`
+        : "SEED_BLOCKED_ENDPOINT가 없어 시드 대상이 운영 DB가 아닌지 확인할 수 없습니다. Vercel 미리보기 환경 변수에 운영 엔드포인트 ID를 설정하세요.",
+    );
+    process.exit(1);
+  }
+} else if (endpoint !== process.env.SEED_ALLOWED_ENDPOINT) {
   console.error(
     `시드 대상 ${endpoint}이(가) SEED_ALLOWED_ENDPOINT와 다릅니다. ` +
       "Neon dev 브랜치가 맞는지 pnpm db:check로 확인한 뒤 .env.local의 SEED_ALLOWED_ENDPOINT에 적으세요.",
@@ -67,7 +79,8 @@ await db.batch([
   // 시리즈 순번 고유 제약과 부딪히지 않도록, 시드 글의 시리즈 연결을 먼저 풀고 다시 넣습니다.
   db
     .update(posts)
-    .set({ seriesId: null, seriesOrder: null })
+    // 스키마의 $onUpdate가 수정 시각을 바꾸지 않도록 현재 값을 그대로 둡니다.
+    .set({ seriesId: null, seriesOrder: null, updatedAt: sql`${posts.updatedAt}` })
     .where(inArray(posts.slug, seededSlugs)),
   db
     .insert(posts)
@@ -93,7 +106,11 @@ await db.batch([
         publishedAt: sql`excluded.published_at`,
         seriesId: sql`excluded.series_id`,
         seriesOrder: sql`excluded.series_order`,
-        updatedAt: sql`now()`,
+        // 글 내용이 바뀐 경우에만 수정 시각을 갱신합니다 (sitemap lastmod 등이 반복 실행으로 바뀌지 않게).
+        // 시리즈 연결은 앞 단계에서 풀었다가 다시 넣으므로 비교에서 뺍니다.
+        updatedAt: sql`case when (${posts.title}, ${posts.summary}, ${posts.contentHtml}, ${posts.status}, ${posts.publishedAt})
+          is distinct from (excluded.title, excluded.summary, excluded.content_html, excluded.status, excluded.published_at)
+          then now() else ${posts.updatedAt} end`,
       },
     }),
   db
