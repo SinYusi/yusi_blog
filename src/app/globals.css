@@ -268,7 +268,7 @@
     padding: --spacing(4) --spacing(5);
     background: var(--code) !important;
     font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-size: var(--text-meta);
     line-height: 1.85;
     word-break: normal;
     overflow-wrap: normal;
