@@ -61,11 +61,13 @@ function getHighlighter() {
   return highlighterPromise;
 }
 
+const HEADING_ID_PREFIX = "sec-";
+
 // 기본 허용 목록에 본문 규칙이 쓰는 속성만 더합니다. 스크립트, 이벤트 속성, iframe 등은 제거됩니다.
 const sanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
-  // 목차 링크(#id)가 그대로 동작하도록 id 앞에 접두사를 붙이지 않습니다. 본문은 관리자만 작성합니다.
-  clobberPrefix: "",
+  // 본문 id가 레이아웃의 id(예: main)와 겹치지 않도록 고정 접두사를 붙입니다. 목차는 정화된 id로 만듭니다.
+  clobberPrefix: HEADING_ID_PREFIX,
   tagNames: [...(defaultSchema.tagNames ?? []), "aside"],
   attributes: {
     ...defaultSchema.attributes,
@@ -148,6 +150,21 @@ function rehypeTableScroll() {
   };
 }
 
+// 본문 안의 #앵커 링크도 접두사가 붙은 id를 가리키게 합니다.
+function rehypePrefixHashLinks() {
+  return (tree: Root) => {
+    visit(tree, "element", (node) => {
+      const href = node.properties.href;
+      if (node.tagName === "a" && typeof href === "string" && href.startsWith("#")) {
+        const id = decodeURIComponent(href.slice(1));
+        if (id && !id.startsWith(HEADING_ID_PREFIX)) {
+          node.properties.href = `#${HEADING_ID_PREFIX}${id}`;
+        }
+      }
+    });
+  };
+}
+
 function collectToc(tree: Root) {
   const toc: TocItem[] = [];
   visit(tree, "element", (node) => {
@@ -165,6 +182,7 @@ export async function renderPostHtml(contentHtml: string) {
   const file = await unified()
     .use(rehypeParse, { fragment: true })
     .use(rehypeSanitize, sanitizeSchema)
+    .use(rehypePrefixHashLinks)
     .use(() => (tree: Root) => {
       toc = collectToc(tree);
     })

@@ -16,6 +16,8 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
 
     // 화면 위쪽 40% 선을 지난 마지막 소제목을 현재 위치로 봅니다. 교차 이벤트만 보면 위로 스크롤할 때
     // 이전 소제목으로 돌아가지 못하므로, 스크롤할 때마다(프레임당 한 번) 위치로 다시 계산합니다.
+    // 데스크톱(lg, 64rem 이상)에서만 보이는 목차이므로, 그보다 좁으면 스크롤 계산을 등록하지 않습니다.
+    const desktop = window.matchMedia("(min-width: 64rem)");
     let frame = 0;
     const update = () => {
       frame = 0;
@@ -31,13 +33,25 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
       frame ||= requestAnimationFrame(update);
     };
 
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => {
+    const detach = () => {
       cancelAnimationFrame(frame);
+      frame = 0;
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
+    };
+    const sync = () => {
+      detach();
+      if (!desktop.matches) return;
+      update();
+      window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("resize", onScroll);
+    };
+
+    sync();
+    desktop.addEventListener("change", sync);
+    return () => {
+      desktop.removeEventListener("change", sync);
+      detach();
     };
   }, [items]);
 
