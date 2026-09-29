@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { ThemeToggle } from "@/components/theme-toggle";
 import { breakpoints, colorTokens, radiusTokens, typeTokens } from "@/lib/design-tokens";
 
 export const metadata: Metadata = {
@@ -36,7 +35,7 @@ function Swatches({ theme }: { theme: "dark" | "light" }) {
 
 export default function DesignTokensPage() {
   return (
-    <main className="mx-auto w-full max-w-content px-5 py-16 md:px-10">
+    <div className="py-16">
       <div className="flex items-start justify-between gap-6">
         <div className="flex flex-col gap-3">
           <p className="font-mono text-meta text-muted">
@@ -44,11 +43,10 @@ export default function DesignTokensPage() {
           </p>
           <h1 className="text-h1">디자인 토큰</h1>
           <p className="text-body text-muted">
-            값의 기준은 <code className="font-mono">src/app/globals.css</code>입니다. 오른쪽
+            값의 기준은 <code className="font-mono">src/app/globals.css</code>입니다. 헤더의 테마
             버튼으로 페이지 전체 테마를 바꿔 볼 수 있습니다.
           </p>
         </div>
-        <ThemeToggle />
       </div>
 
       <Section title="색 · 다크">
@@ -102,6 +100,6 @@ export default function DesignTokensPage() {
           ))}
         </div>
       </Section>
-    </main>
+    </div>
   );
 }
