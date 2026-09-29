@@ -9,7 +9,7 @@ import { NavLink } from "./nav-link";
 export function SiteHeader() {
   return (
     <header className="border-b border-border">
-      <div className="mx-auto flex max-w-content items-center justify-between px-5 py-2.5 md:px-10 md:py-4 lg:py-6">
+      <div className="mx-auto flex max-w-content items-center justify-between px-5 py-2 md:px-10 md:py-4 lg:py-6">
         <Link
           href="/"
           className="inline-flex min-h-11 items-center font-mono text-body font-bold lg:text-body-lg"
@@ -17,7 +17,7 @@ export function SiteHeader() {
           <span className="text-accent">~/</span>yusi_blog
           <span
             aria-hidden="true"
-            className="ml-1.5 inline-block h-4 w-2 translate-y-0.5 bg-accent"
+            className="ml-2 inline-block h-4 w-2 translate-y-0.5 bg-accent"
           />
         </Link>
 

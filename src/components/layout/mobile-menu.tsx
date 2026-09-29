@@ -43,7 +43,7 @@ export function MobileMenu() {
         className="m-0 h-dvh max-h-none w-full max-w-none bg-bg p-0 text-fg backdrop:bg-bg"
       >
         <div className="flex h-full flex-col px-5">
-          <div className="flex items-center justify-between border-b border-border py-3.5">
+          <div className="flex items-center justify-between border-b border-border py-3">
             <span className="font-mono text-body font-bold">
               <span className="text-accent">~/</span>yusi_blog
             </span>

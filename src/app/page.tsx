@@ -55,7 +55,7 @@ export default async function Home() {
                 <section aria-labelledby="series-heading">
                   <h2
                     id="series-heading"
-                    className="mb-3.5 font-mono text-meta font-medium text-muted"
+                    className="mb-4 font-mono text-meta font-medium text-muted"
                   >
                     {"// series"}
                   </h2>
@@ -71,17 +71,14 @@ export default async function Home() {
               )}
               {tagList.length > 0 && (
                 <section aria-labelledby="tags-heading">
-                  <h2
-                    id="tags-heading"
-                    className="mb-3.5 font-mono text-meta font-medium text-muted"
-                  >
+                  <h2 id="tags-heading" className="mb-4 font-mono text-meta font-medium text-muted">
                     {"// tags"}
                   </h2>
                   <ul className="flex flex-wrap gap-2 font-mono text-caption">
                     {tagList.map((tag) => (
                       <li
                         key={tag.slug}
-                        className="rounded-md border border-border bg-surface px-2.5 py-1.5"
+                        className="rounded-md border border-border bg-surface px-3 py-1"
                       >
                         #{tag.name} <span className="text-muted">{tag.postCount}</span>
                       </li>
