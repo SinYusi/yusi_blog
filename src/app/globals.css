@@ -148,14 +148,15 @@
 
 /*
  * 글 본문. 본문 HTML은 DB에서 오므로 클래스를 달 수 없어, 태그 선택자로 스타일을 지정합니다.
- * 값은 모두 디자인 토큰을 씁니다.
+ * 값은 모두 디자인 토큰을 씁니다. 상자 안쪽 여백은 4px 단위(--spacing)를 쓰고,
+ * 문단·목록 사이 간격처럼 글자 크기에 비례해야 하는 타이포그래피 간격만 em을 씁니다.
  */
 @layer components {
   .prose-article {
     color: var(--fg-article);
     font-size: var(--text-body-lg);
     line-height: 1.9;
-    padding-top: 0.5rem;
+    padding-top: --spacing(2);
   }
 
   .prose-article > * + * {
@@ -170,7 +171,7 @@
     font-weight: 700;
     line-height: 1.4;
     letter-spacing: -0.018em;
-    scroll-margin-top: 1.5rem;
+    scroll-margin-top: --spacing(6);
   }
 
   .prose-article :where(h2)::before {
@@ -185,7 +186,7 @@
     color: var(--fg);
     font-size: var(--text-h3);
     font-weight: 600;
-    scroll-margin-top: 1.5rem;
+    scroll-margin-top: --spacing(6);
   }
 
   .prose-article :where(strong) {
@@ -239,8 +240,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 0.4rem 0.5rem 0.4rem 1rem;
+    gap: --spacing(4);
+    padding: --spacing(1) --spacing(2) --spacing(1) --spacing(4);
     border-bottom: 1px solid var(--border);
     background: var(--surface);
     color: var(--muted);
@@ -249,8 +250,8 @@
   }
 
   .prose-article .code-block figcaption button {
-    min-height: 2.75rem;
-    padding: 0 0.75rem;
+    min-height: --spacing(11);
+    padding: 0 --spacing(3);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
     color: var(--muted);
@@ -264,7 +265,7 @@
   .prose-article .code-block pre {
     overflow-x: auto;
     margin: 0;
-    padding: 1.1rem 1.25rem;
+    padding: --spacing(4) --spacing(5);
     background: var(--code) !important;
     font-family: var(--font-mono);
     font-size: 0.8125rem;
@@ -302,7 +303,7 @@
   }
 
   .prose-article :where(th) {
-    padding: 0.7rem 1rem;
+    padding: --spacing(3) --spacing(4);
     border-bottom: 1px solid var(--border);
     background: var(--surface);
     color: var(--muted);
@@ -314,7 +315,7 @@
   }
 
   .prose-article :where(td) {
-    padding: 0.7rem 1rem;
+    padding: --spacing(3) --spacing(4);
     border-bottom: 1px solid var(--border);
     color: var(--fg-article);
   }
@@ -325,7 +326,7 @@
 
   /* 콜아웃: 종류는 강조 문구의 색으로 구분 */
   .prose-article :where(aside[data-callout]) {
-    padding: 1rem 1.25rem;
+    padding: --spacing(4) --spacing(5);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     background: var(--surface);

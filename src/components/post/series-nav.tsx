@@ -15,7 +15,7 @@ export function SeriesNav({ series }: { series: NonNullable<PostDetail["series"]
     >
       {series.prev ? (
         <Link href={`/posts/${series.prev.slug}`} rel="prev" className={cardClass}>
-          <span className="mb-1.5 block font-mono text-caption text-muted">← 이전 글</span>
+          <span className="mb-2 block font-mono text-caption text-muted">← 이전 글</span>
           <span className="block text-body font-semibold">{series.prev.title}</span>
         </Link>
       ) : (
@@ -27,7 +27,7 @@ export function SeriesNav({ series }: { series: NonNullable<PostDetail["series"]
           rel="next"
           className={`${cardClass} md:text-right`}
         >
-          <span className="mb-1.5 block font-mono text-caption text-muted">다음 글 →</span>
+          <span className="mb-2 block font-mono text-caption text-muted">다음 글 →</span>
           <span className="block text-body font-semibold">{series.next.title}</span>
         </Link>
       )}

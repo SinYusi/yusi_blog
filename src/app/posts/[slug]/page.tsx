@@ -68,7 +68,10 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
             <ol className="flex flex-col px-4 pb-3 text-body">
               {post.toc.map((item) => (
                 <li key={item.id}>
-                  <a href={`#${item.id}`} className="block py-2 text-muted hover:text-fg">
+                  <a
+                    href={`#${item.id}`}
+                    className="flex min-h-11 items-center text-muted hover:text-fg"
+                  >
                     {item.text}
                   </a>
                 </li>

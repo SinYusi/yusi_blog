@@ -28,14 +28,14 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
 
   return (
     <nav aria-label="목차">
-      <h2 className="mb-3.5 font-mono text-meta font-medium text-muted">{"// on this page"}</h2>
+      <h2 className="mb-4 font-mono text-meta font-medium text-muted">{"// on this page"}</h2>
       <ol className="flex flex-col border-l border-border text-body">
         {items.map((item) => (
           <li key={item.id}>
             <a
               href={`#${item.id}`}
               aria-current={activeId === item.id ? "location" : undefined}
-              className="-ml-px block border-l-2 border-transparent py-1.5 pl-4 text-muted hover:text-fg aria-[current=location]:border-accent aria-[current=location]:font-semibold aria-[current=location]:text-accent"
+              className="-ml-px flex min-h-11 items-center border-l-2 border-transparent pl-4 text-muted hover:text-fg aria-[current=location]:border-accent aria-[current=location]:font-semibold aria-[current=location]:text-accent"
             >
               {item.text}
             </a>

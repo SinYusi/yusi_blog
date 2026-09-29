@@ -112,12 +112,8 @@ export async function getTagSummaries() {
 
 /** 정적 생성할 공개 글의 slug 목록 */
 export async function getPublicPostSlugs() {
-  "use cache";
-  cacheLife("hours");
-  cacheTag(CONTENT_CACHE_TAG);
-
-  const rows = await getDb().select({ slug: posts.slug }).from(posts).where(isPublic);
-  return rows.map((row) => row.slug);
+  // 목록 조회 결과를 재사용해 빌드 쿼리를 늘리지 않습니다.
+  return (await getPublicPostList()).map((post) => post.slug);
 }
 
 export type SeriesNeighbor = { slug: string; title: string };
