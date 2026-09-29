@@ -17,8 +17,6 @@ import { renderPostHtml, type TocItem } from "./render";
  */
 export const CONTENT_CACHE_TAG = "posts";
 export const POSTS_PAGE_SIZE = 10;
-/** 홈의 최근 글 수 (대표 글 1 + 목록). sitemap의 홈 lastModified 계산에도 씁니다. */
-export const HOME_POST_COUNT = 6;
 
 /*
  * 공개 조건: 발행(published) 또는 예약(scheduled) 상태이고 발행 시각이 지난 글.

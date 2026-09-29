@@ -33,7 +33,7 @@
 
 - [ ] Auth.js GitHub OAuth, `/admin` 라우트 보호
 - [ ] Tiptap 에디터 기본 구성
-- [ ] 글 작성, 수정, 삭제, 발행 상태 관리
+- [ ] 글 작성, 수정, 삭제, 발행 상태 관리 (글의 태그·시리즈 연결을 바꾸거나 태그 이름을 바꾸면 관련 글의 `updated_at`도 갱신해 sitemap·RSS·JSON-LD의 수정 시각에 반영)
 - [ ] 발행 시 on-demand revalidation
 - [ ] 이미지 업로드 (저장소 결정 포함)
 - [ ] 자동 저장

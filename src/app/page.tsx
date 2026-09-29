@@ -3,13 +3,10 @@ import Link from "next/link";
 
 import { FeaturedPost } from "@/components/posts/featured-post";
 import { PostRow } from "@/components/posts/post-row";
-import {
-  getLatestPosts,
-  getSeriesSummaries,
-  getTagSummaries,
-  HOME_POST_COUNT,
-} from "@/lib/content/posts";
+import { getLatestPosts, getSeriesSummaries, getTagSummaries } from "@/lib/content/posts";
 import { pageMetadata } from "@/lib/site";
+
+const HOME_POST_COUNT = 6;
 
 export const metadata: Metadata = pageMetadata({ path: "/" });
 
