@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, desc, eq, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { getDb } from "@/db";
@@ -9,13 +9,21 @@ import { posts, postTags, series, tags } from "@/db/schema";
 /*
  * 공개 페이지용 조회 함수. 모두 'use cache'로 캐시되어 빌드 시 정적 셸에 포함됩니다.
  * - 태그 CONTENT_CACHE_TAG: 2단계 CMS에서 글을 발행·수정하면 revalidateTag로 다시 생성합니다.
- * - cacheLife('hours'): 예약 발행 글이 발행 시각 이후 늦어도 한 시간 안에 보이도록 합니다.
+ * - cacheLife('hours'): 한 시간이 지난 뒤 들어온 요청이 백그라운드 재생성을 시작합니다. 그래서 예약 글은 발행 시각
+ *   이후 대략 한 시간 안팎에 보이지만 정확한 시각은 보장하지 않습니다. 정시 공개가 필요해지면 2단계 CMS에서
+ *   발행 시각에 revalidateTag(CONTENT_CACHE_TAG)를 호출합니다.
  */
 export const CONTENT_CACHE_TAG = "posts";
 export const POSTS_PAGE_SIZE = 10;
 
-// 공개 조건: 발행 상태이고 발행 시각이 지난 글
-const isPublic = and(eq(posts.status, "published"), lte(posts.publishedAt, sql`now()`));
+/*
+ * 공개 조건: 발행(published) 또는 예약(scheduled) 상태이고 발행 시각이 지난 글.
+ * 예약 글을 발행 시각에 published로 바꾸는 작업을 따로 두지 않고, 조회 조건으로 공개 여부를 정합니다.
+ */
+const isPublic = and(
+  inArray(posts.status, ["published", "scheduled"]),
+  lte(posts.publishedAt, sql`now()`),
+);
 
 export type PostListItem = {
   slug: string;

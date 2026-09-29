@@ -14,15 +14,16 @@ export async function generateStaticParams() {
   return Array.from({ length: totalPages }, (_, i) => ({ page: String(i + 1) }));
 }
 
+// 최대 6자리로 제한해 아주 큰 번호가 DB OFFSET 범위를 넘거나 Infinity가 되지 않게 합니다 (범위 밖은 404).
 function parsePage(value: string) {
-  return /^[1-9]\d*$/.test(value) ? Number(value) : null;
+  return /^[1-9]\d{0,5}$/.test(value) ? Number(value) : null;
 }
 
 export async function generateMetadata({
   params,
 }: PageProps<"/posts/page/[page]">): Promise<Metadata> {
-  const { page } = await params;
-  return { title: `모든 글 (${page}페이지)` };
+  const page = parsePage((await params).page);
+  return page === null ? {} : { title: `모든 글 (${page}페이지)` };
 }
 
 export default async function PostsPageN({ params }: PageProps<"/posts/page/[page]">) {

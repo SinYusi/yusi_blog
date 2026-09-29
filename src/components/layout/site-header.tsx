@@ -10,7 +10,10 @@ export function SiteHeader() {
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-content items-center justify-between px-5 py-2.5 md:px-10 md:py-4 lg:py-6">
-        <Link href="/" className="font-mono text-body font-bold lg:text-body-lg">
+        <Link
+          href="/"
+          className="inline-flex min-h-11 items-center font-mono text-body font-bold lg:text-body-lg"
+        >
           <span className="text-accent">~/</span>yusi_blog
           <span
             aria-hidden="true"
