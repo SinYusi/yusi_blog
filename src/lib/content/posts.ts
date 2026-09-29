@@ -135,7 +135,6 @@ export type PostDetail = PostListItem & {
 /** 공개된 글의 상세. 공개되지 않은 글(초안, 예약, 없는 slug)은 null입니다. 본문 렌더링도 캐시에 포함됩니다. */
 export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
   "use cache";
-  cacheLife("hours");
   cacheTag(CONTENT_CACHE_TAG, `post:${slug}`);
 
   const post = await getDb().query.posts.findFirst({
@@ -155,11 +154,17 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
       postTags: { with: { tag: { columns: { slug: true, name: true } } } },
     },
   });
-  if (!post) return null;
+  if (!post) {
+    // 예약 글은 발행 시각 전에 조회되면 null이 됩니다. 발행 뒤 404가 오래 남지 않도록 짧게 캐시합니다.
+    cacheLife("minutes");
+    return null;
+  }
+  cacheLife("hours");
 
   let seriesInfo: PostDetail["series"] = null;
   if (post.series && post.seriesId !== null && post.seriesOrder !== null) {
     // 같은 시리즈의 공개된 글만 순서대로 가져와 이전·다음 글을 정합니다 (초안·예약 글로 가는 링크 방지).
+    // 표시하는 편 번호는 저장된 series_order를 써서, 중간 글의 공개 여부에 따라 번호가 바뀌지 않게 합니다.
     const siblings = await getDb()
       .select({ slug: posts.slug, title: posts.title, order: posts.seriesOrder })
       .from(posts)
@@ -171,7 +176,7 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
     seriesInfo = {
       slug: post.series.slug,
       name: post.series.name,
-      order: position + 1,
+      order: post.seriesOrder,
       publicCount: siblings.length,
       prev: pick(position - 1),
       next: pick(position + 1),

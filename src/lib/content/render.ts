@@ -47,9 +47,10 @@ const LANGUAGE_ALIASES: Record<string, string> = {
 
 /*
  * GitHub 라이트 테마의 주석 색(#6e7781)은 흰 배경 기준이라, 코드 배경 토큰(--code #eef2f8) 위에서 4.05:1로
- * WCAG AA(4.5:1)에 못 미칩니다. 대비 검사를 거친 muted 토큰(#55617a)으로 바꿉니다.
+ * WCAG AA(4.5:1)에 못 미칩니다. 대비 검사(check:contrast)를 거친 muted 토큰으로 바꿉니다.
+ * 값 대신 CSS 변수를 넣어, 토큰을 바꾸면 코드 주석 색도 함께 바뀌게 합니다.
  */
-const COLOR_REPLACEMENTS = { "github-light-default": { "#6e7781": "#55617a" } };
+const COLOR_REPLACEMENTS = { "github-light-default": { "#6e7781": "var(--muted)" } };
 
 let highlighterPromise: ReturnType<typeof createHighlighter> | undefined;
 function getHighlighter() {
