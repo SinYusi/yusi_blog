@@ -82,7 +82,10 @@ export function MobileMenu() {
           </nav>
 
           <div className="mt-auto flex items-center justify-between py-8">
-            <a href={GITHUB_URL} className="px-2 py-3 font-mono text-meta text-muted hover:text-fg">
+            <a
+              href={GITHUB_URL}
+              className="inline-flex min-h-11 items-center px-2 font-mono text-meta text-muted hover:text-fg"
+            >
               github
             </a>
             <ThemeToggle />

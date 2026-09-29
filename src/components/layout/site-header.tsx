@@ -29,7 +29,7 @@ export function SiteHeader() {
             <NavLink
               key={item.href}
               href={item.href}
-              className="py-3 text-muted hover:text-fg aria-[current=page]:text-fg"
+              className="inline-flex min-h-11 items-center text-muted hover:text-fg aria-[current=page]:text-fg"
             >
               ./{item.label}
             </NavLink>
