@@ -17,6 +17,8 @@ import { renderPostHtml, type TocItem } from "./render";
  */
 export const CONTENT_CACHE_TAG = "posts";
 export const POSTS_PAGE_SIZE = 10;
+/** 홈의 최근 글 수 (대표 글 1 + 목록). sitemap의 홈 lastModified 계산에도 씁니다. */
+export const HOME_POST_COUNT = 6;
 
 /*
  * 공개 조건: 발행(published) 또는 예약(scheduled) 상태이고 발행 시각이 지난 글.
@@ -32,6 +34,8 @@ export type PostListItem = {
   title: string;
   summary: string;
   publishedAt: Date;
+  /** 발행 시각과 수정 시각 중 늦은 쪽. 발행 전에 고친 예약 글도 발행 시각보다 앞서지 않습니다 (sitemap, RSS) */
+  modifiedAt: Date;
   tags: { slug: string; name: string }[];
 };
 
@@ -48,16 +52,17 @@ async function getPublicPostList() {
   const rows = await getDb().query.posts.findMany({
     where: isPublic,
     orderBy: [desc(posts.publishedAt), desc(posts.id)],
-    columns: { slug: true, title: true, summary: true, publishedAt: true },
+    columns: { slug: true, title: true, summary: true, publishedAt: true, updatedAt: true },
     with: {
       postTags: { with: { tag: { columns: { slug: true, name: true } } } },
     },
   });
 
-  return rows.map(({ postTags: links, publishedAt, ...post }): PostListItem => ({
+  return rows.map(({ postTags: links, publishedAt, updatedAt, ...post }): PostListItem => ({
     ...post,
     // isPublic 조건상 발행 시각은 항상 있습니다.
     publishedAt: publishedAt!,
+    modifiedAt: latestOf(publishedAt!, updatedAt),
     tags: links.map((link) => link.tag).sort((a, b) => a.name.localeCompare(b.name, "ko")),
   }));
 }
@@ -116,26 +121,16 @@ export async function getPublicPostSlugs() {
   return (await getPublicPostList()).map((post) => post.slug);
 }
 
-/** sitemap용 공개 글 목록. 수정 시각은 발행 전에 고친 글(예약 발행)도 있으므로 발행 시각보다 앞서지 않게 맞춥니다. */
-export async function getSitemapPosts() {
-  "use cache";
-  cacheLife("hours");
-  cacheTag(CONTENT_CACHE_TAG);
-
-  const rows = await getDb()
-    .select({ slug: posts.slug, publishedAt: posts.publishedAt, updatedAt: posts.updatedAt })
-    .from(posts)
-    .where(isPublic)
-    .orderBy(desc(posts.publishedAt));
-  return rows.map((row) => ({
-    slug: row.slug,
-    publishedAt: row.publishedAt!,
-    modifiedAt: latestOf(row.publishedAt!, row.updatedAt),
-  }));
-}
-
 function latestOf(a: Date, b: Date) {
   return a > b ? a : b;
+}
+
+/** 목록에 담긴 글 중 가장 늦은 수정 시각 (sitemap의 목록 lastModified, RSS lastBuildDate) */
+export function latestModifiedAt(items: PostListItem[]) {
+  return items.reduce<Date | undefined>(
+    (latest, post) => (latest ? latestOf(latest, post.modifiedAt) : post.modifiedAt),
+    undefined,
+  );
 }
 
 export type SeriesNeighbor = { slug: string; title: string };
@@ -143,8 +138,6 @@ export type SeriesNeighbor = { slug: string; title: string };
 export type PostDetail = PostListItem & {
   html: string;
   toc: TocItem[];
-  /** 발행 시각과 수정 시각 중 늦은 쪽 (JSON-LD dateModified, og:article:modified_time) */
-  modifiedAt: Date;
   series: {
     slug: string;
     name: string;

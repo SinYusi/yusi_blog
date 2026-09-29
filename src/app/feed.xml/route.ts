@@ -1,4 +1,4 @@
-import { getLatestPosts } from "@/lib/content/posts";
+import { getLatestPosts, latestModifiedAt } from "@/lib/content/posts";
 import { FEED_PATH, SITE_DESCRIPTION, SITE_NAME, absoluteUrl, postPath } from "@/lib/site";
 
 /*
@@ -37,7 +37,9 @@ export async function GET() {
       .join("");
   });
 
-  // lastBuildDate는 빌드 시각이 아닌 최신 글 발행 시각을 씁니다 (같은 데이터면 같은 응답).
+  // lastBuildDate는 빌드 시각이 아니라 피드에 담긴 글의 가장 늦은 수정 시각입니다. 데이터가 같으면 응답도 같고,
+  // 글을 수정하면 함께 바뀝니다.
+  const lastModified = latestModifiedAt(posts);
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
@@ -47,7 +49,7 @@ export async function GET() {
     `<description>${escapeXml(SITE_DESCRIPTION)}</description>`,
     "<language>ko</language>",
     `<atom:link href="${escapeXml(absoluteUrl(FEED_PATH))}" rel="self" type="application/rss+xml"/>`,
-    posts[0] && `<lastBuildDate>${posts[0].publishedAt.toUTCString()}</lastBuildDate>`,
+    lastModified && `<lastBuildDate>${lastModified.toUTCString()}</lastBuildDate>`,
     ...items,
     "</channel>",
     "</rss>",

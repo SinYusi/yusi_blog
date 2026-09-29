@@ -20,9 +20,13 @@ function resolveSiteUrl() {
 
 export const SITE_URL = new URL(resolveSiteUrl());
 
-/** 운영 배포에서만 검색 엔진 수집을 허용합니다. Vercel 밖(로컬 빌드)에서는 제한하지 않습니다. */
+/*
+ * 검색 엔진 수집은 운영 배포(VERCEL_ENV=production)에서만 허용합니다. 환경을 알 수 없으면 막습니다.
+ * Vercel 시스템 환경 변수 노출이 꺼져 있어도 미리보기가 수집되지 않게 하기 위해서입니다.
+ * 로컬에서 SEO를 측정할 때는 ALLOW_INDEXING=true로 빌드합니다.
+ */
 export const ALLOW_INDEXING =
-  process.env.VERCEL_ENV === undefined || process.env.VERCEL_ENV === "production";
+  process.env.VERCEL_ENV === "production" || process.env.ALLOW_INDEXING === "true";
 
 export function absoluteUrl(path: string) {
   return new URL(path, SITE_URL).href;
