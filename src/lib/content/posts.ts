@@ -33,12 +33,19 @@ export type PostListItem = {
   tags: { slug: string; name: string }[];
 };
 
-async function findPublicPosts({ limit, offset = 0 }: { limit: number; offset?: number }) {
+/*
+ * 공개 글 목록 전체를 한 번만 조회해 캐시하고, 홈·목록 페이지는 여기서 잘라 씁니다.
+ * 빌드 리전이 DB와 멀어도 목록 페이지 수만큼 쿼리가 늘지 않게 합니다 (ADR-0005 "빌드 리전").
+ * 목록에는 본문 없이 제목·요약·태그만 담으므로 글이 수백 개여도 부담이 작습니다.
+ */
+async function getPublicPostList() {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CONTENT_CACHE_TAG);
+
   const rows = await getDb().query.posts.findMany({
     where: isPublic,
     orderBy: [desc(posts.publishedAt), desc(posts.id)],
-    limit,
-    offset,
     columns: { slug: true, title: true, summary: true, publishedAt: true },
     with: {
       postTags: { with: { tag: { columns: { slug: true, name: true } } } },
@@ -54,24 +61,17 @@ async function findPublicPosts({ limit, offset = 0 }: { limit: number; offset?: 
 }
 
 export async function getLatestPosts(limit: number) {
-  "use cache";
-  cacheLife("hours");
-  cacheTag(CONTENT_CACHE_TAG);
-
-  return findPublicPosts({ limit });
+  return (await getPublicPostList()).slice(0, limit);
 }
 
 export async function getPostsPage(page: number) {
-  "use cache";
-  cacheLife("hours");
-  cacheTag(CONTENT_CACHE_TAG);
-
-  const [[{ total }], items] = await Promise.all([
-    getDb().select({ total: count() }).from(posts).where(isPublic),
-    findPublicPosts({ limit: POSTS_PAGE_SIZE, offset: (page - 1) * POSTS_PAGE_SIZE }),
-  ]);
-
-  return { items, total, totalPages: Math.max(1, Math.ceil(total / POSTS_PAGE_SIZE)) };
+  const all = await getPublicPostList();
+  const start = (page - 1) * POSTS_PAGE_SIZE;
+  return {
+    items: all.slice(start, start + POSTS_PAGE_SIZE),
+    total: all.length,
+    totalPages: Math.max(1, Math.ceil(all.length / POSTS_PAGE_SIZE)),
+  };
 }
 
 /** 공개된 글이 하나 이상 있는 시리즈. 공개 글 수와 최근 발행일을 함께 반환합니다. */
