@@ -150,16 +150,22 @@ function rehypeTableScroll() {
   };
 }
 
-// 본문 안의 #앵커 링크도 접두사가 붙은 id를 가리키게 합니다.
+/*
+ * 본문 안의 #앵커 링크도 접두사가 붙은 id를 가리키게 합니다. 정화 단계는 원본 id가 이미 접두사로 시작해도
+ * 항상 접두사를 붙이므로 링크에도 항상 붙입니다. 조각은 디코딩하지 않고 그대로 둡니다. 브라우저가 이동할 때
+ * 디코딩해 id와 비교하므로, 잘못된 %-인코딩이 있어도 렌더링이 실패하지 않습니다.
+ */
 function rehypePrefixHashLinks() {
   return (tree: Root) => {
     visit(tree, "element", (node) => {
       const href = node.properties.href;
-      if (node.tagName === "a" && typeof href === "string" && href.startsWith("#")) {
-        const id = decodeURIComponent(href.slice(1));
-        if (id && !id.startsWith(HEADING_ID_PREFIX)) {
-          node.properties.href = `#${HEADING_ID_PREFIX}${id}`;
-        }
+      if (
+        node.tagName === "a" &&
+        typeof href === "string" &&
+        href.length > 1 &&
+        href.startsWith("#")
+      ) {
+        node.properties.href = `#${HEADING_ID_PREFIX}${href.slice(1)}`;
       }
     });
   };

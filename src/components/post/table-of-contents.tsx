@@ -27,6 +27,10 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
         if (heading.getBoundingClientRect().top > line) break;
         current = heading.id;
       }
+      // 마지막 섹션이 짧으면 끝까지 내려도 마지막 소제목이 기준선에 닿지 않으므로, 페이지 끝에서는 마지막 항목을 고릅니다.
+      const atBottom =
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      if (atBottom) current = headings[headings.length - 1].id;
       setActiveId(current);
     };
     const onScroll = () => {
