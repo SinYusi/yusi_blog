@@ -26,4 +26,4 @@ Closes #
 
 - [ ] 로컬에서 `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build` 통과
 - [ ] 관련 문서 갱신 (`docs/ROADMAP.md` 체크리스트, 필요하면 ADR)
-- [ ] AI 리뷰(CodeRabbit, Gemini) 지적 사항 반영 또는 반영하지 않은 이유 답글
+- [ ] AI 리뷰(CodeRabbit, Codex) 지적 사항 반영 또는 반영하지 않은 이유 답글

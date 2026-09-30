@@ -15,9 +15,9 @@
 2. 최신 `dev`에서 `<type>/<이슈번호>-<짧은-설명>` 브랜치를 만든다.
 3. 작업하고, 커밋 전에 format:check, lint, typecheck, build를 통과시킨다.
 4. `dev`를 대상으로 .github/pull_request_template.md 형식의 PR을 만들고 `Closes #이슈번호`를 넣는다.
-5. CodeRabbit, Gemini 리뷰를 기다린다. 리뷰가 달리지 않으면 `@coderabbitai review`, `@gemini-cli /review`로 요청한다. 머지 전 필수 리뷰는 변경 범위에 따라 다르다(docs/CONTRIBUTING.md 5단계 표: 문서만 바꾸면 Gemini만).
+5. CodeRabbit, Codex 리뷰를 받는다 (CodeRabbit 자동 리뷰는 PR을 열 때만, Codex는 요청할 때만). 리뷰가 달리지 않거나 push 후 다시 받으려면 `@coderabbitai review`, `@codex review`로 요청한다. 머지 전 필수 리뷰는 변경 범위에 따라 다르다(docs/CONTRIBUTING.md 5단계 표: 문서만 바꾸면 Codex만).
 6. 타당한 지적은 반영하고 스레드에 반영 커밋을 답글로 단 뒤 해결 처리한다. 반영하지 않는 지적에는 근거를 답글로 남긴다.
 7. CI 통과와 리뷰 반영이 끝나면 사용자에게 머지를 요청한다. 직접 머지하지 않는다.
 8. 머지 후 다음 작업 전에 `dev`를 pull한다.
-9. 릴리스는 사용자가 지시할 때만 `dev` → `main` PR로 만든다 (merge commit으로 머지). 머지되면 버전 태그와 GitHub Release를 만든다 (docs/CONTRIBUTING.md 릴리스 절).
-10. 재리뷰: 리뷰어의 코드 제안을 그대로 적용한 커밋만 생략한다. 직접 작성한 수정은 다시 리뷰받는다. CodeRabbit 리뷰를 기다리는 PR이 있으면 새 PR은 그 뒤에 연다(자동 리뷰가 시간당 한도를 쓰므로).
+9. 릴리스는 사용자가 지시할 때만 `dev` → `main` PR로 만들고 `release` 라벨을 붙인다 (merge commit으로 머지, AI 재리뷰 없음). 머지되면 annotated 태그와 GitHub Release(하이라이트 + 자동 목록)를 만든다 (docs/CONTRIBUTING.md 릴리스 절).
+10. 재리뷰: 리뷰어의 코드 제안을 그대로 적용한 커밋만 생략한다. 직접 작성한 수정은 다시 리뷰받는다(재리뷰할 리뷰어는 수정 커밋의 변경 범위로 정한다: 문서만 바꿨으면 Codex만). CodeRabbit 리뷰를 기다리는 PR이 있으면 새 PR은 그 뒤에 연다(자동 리뷰가 시간당 한도를 쓰므로).

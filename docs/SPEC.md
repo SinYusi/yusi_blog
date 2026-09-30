@@ -17,7 +17,7 @@
 | --------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | 프레임워크      | Next.js (App Router) + TypeScript     | RSC, SSG/ISR, Server Actions를 한 프로젝트에서 모두 다룸 ([ADR-0001](adr/0001-nextjs-app-router.md)) |
 | 스타일          | Tailwind CSS + 자체 UI 컴포넌트       | UI 라이브러리 대신 디자인 토큰과 컴포넌트를 직접 구축                                                |
-| DB / ORM        | PostgreSQL + Drizzle ORM              | 타입 안전한 쿼리, 서버리스 환경 적합 ([ADR-0002](adr/0002-self-hosted-cms.md))                       |
+| DB / ORM        | PostgreSQL(Neon) + Drizzle ORM        | 타입 안전한 쿼리, 서버리스 환경 적합 ([ADR-0002](adr/0002-self-hosted-cms.md))                       |
 | 인증            | Auth.js (GitHub OAuth)                | 관리자 1인 인증, 미들웨어 기반 라우트 보호                                                           |
 | 에디터          | Tiptap (ProseMirror)                  | 확장을 직접 작성할 수 있는 블록 에디터                                                               |
 | 코드 하이라이트 | Shiki                                 | 서버 렌더링으로 클라이언트 JS 0                                                                      |
@@ -66,20 +66,35 @@
 | 조회수 / 좋아요        | 클라이언트 컴포넌트 + Server Action | 정적 페이지 안의 동적 영역만 분리 |
 | 관리자                 | 동적 렌더링, 인증 필요              | 캐시 대상 아님                    |
 
-## 5. 데이터 모델 (초안)
+## 5. 데이터 모델
+
+정의는 `src/db/schema.ts`, 변경 이력은 `drizzle/` 마이그레이션 파일이 기준입니다.
+
+**1단계 (확정)**
+
+```
+posts        id, slug(unique), title, summary, content(jsonb, 에디터 원본), content_html,
+             status(draft|published|scheduled), published_at,
+             series_id → series(삭제 제한), series_order, view_count, like_count,
+             created_at, updated_at
+series       id, slug(unique), name, description, created_at, updated_at
+tags         id, slug(unique), name(unique), created_at, updated_at
+post_tags    post_id → posts(연쇄 삭제), tag_id → tags(연쇄 삭제), PK(post_id, tag_id)
+```
+
+DB 제약으로 지키는 규칙:
+
+- 발행·예약 상태의 글은 발행일(`published_at`)이 있어야 한다.
+- `series_id`와 `series_order`는 함께 있거나 함께 비어 있어야 하며, 순서는 1 이상이고 한 시리즈 안에서 겹치지 않는다.
+- 글이 남아 있는 시리즈는 삭제할 수 없다.
+- 조회수·좋아요는 0 이상이다.
+
+**2단계 (예정)**
 
 ```
 users        id, github_id, name, avatar_url, role
-posts        id, slug, title, summary, content(JSON), content_html,
-             status(draft|published|scheduled), published_at,
-             series_id, view_count, like_count, created_at, updated_at
-tags         id, name, slug
-post_tags    post_id, tag_id
-series       id, name, slug, description
 images       id, url, width, height, alt, post_id, created_at
 ```
-
-세부 스키마는 1단계에서 확정합니다.
 
 ## 6. 디렉터리 구조 (초안)
 
@@ -119,6 +134,5 @@ docs/               스펙, 로드맵, ADR
 | 항목                 | 후보                       | 비고               |
 | -------------------- | -------------------------- | ------------------ |
 | 블로그 이름 / 도메인 | -                          | 커스텀 도메인 권장 |
-| DB 호스팅            | Neon, Supabase             | 1단계 시작 전 결정 |
 | 이미지 저장소        | Cloudflare R2, Vercel Blob | 2단계 시작 전 결정 |
 | 댓글                 | Giscus, 자체 구현          | Giscus로 시작 예정 |

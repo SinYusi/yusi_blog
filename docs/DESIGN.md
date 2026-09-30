@@ -48,6 +48,9 @@
 | `meta`    | 13 / 400 mono | 날짜, 태그          |
 | `caption` | 12 / 400      | 보조 라벨           |
 
+- 한글은 단어 단위로 줄바꿈합니다(`word-break: keep-all`). 긴 영문·URL은 넘치지 않도록 끊습니다(`overflow-wrap: break-word`).
+- 한글 폰트는 preload하지 않습니다. 수백 개의 unicode-range 조각 중 페이지에 쓰인 글자의 조각만 받게 하기 위해서입니다 (성과 기록: 폰트 전송량 −87%).
+
 글자 크기는 `text-display`, `text-h1` … `text-caption` 유틸리티로 쓰며, 줄 간격·자간·굵기가 함께 적용됩니다. display, h1, h2, h3, body-lg는 `clamp()`로 화면 너비에 따라 연속으로 바뀝니다.
 
 ## 3. 간격 · 모서리
@@ -78,6 +81,12 @@
 - `<head>`의 인라인 스크립트가 HTML 파싱 중에 저장된 테마를 적용하므로, 첫 화면부터 올바른 테마로 그려집니다 (깜빡임 없음). 페이지는 정적 렌더링을 유지합니다.
 - 요소 단위로 `data-theme`을 지정하면 그 안만 다른 테마로 보여 줄 수 있습니다 (`/design` 페이지의 색 견본).
 - 토큰 확인 페이지: `/design`
+
+### 글 본문
+
+- 본문 HTML은 `src/lib/content/render.ts`에서 허용 목록으로 정화한 뒤 스타일(`.prose-article`)을 적용합니다. 규칙은 `src/db/seed-data.ts` 상단 주석을 따릅니다.
+- 코드 하이라이트는 Shiki 이중 테마(`github-light-default`, `github-dark-default`)를 CSS 변수로 전환합니다. 배경은 `code` 토큰을 쓰고, 라이트 테마의 주석 색(#6e7781, 4.05:1)은 `muted`(#55617a, 5.53:1)로 바꿉니다. 두 테마의 코드 색은 모두 WCAG AA 이상입니다.
+- 목차: 데스크톱은 스크롤 위치를 따라가는 사이드바, 그보다 좁으면 `<details>` 접이식.
 
 ## 6. 화면 목록
 

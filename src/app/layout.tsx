@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_KR, JetBrains_Mono } from "next/font/google";
 
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
+import { FEED_PATH, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { DEFAULT_THEME, themeInitScript } from "@/lib/theme";
 
 import "./globals.css";
@@ -10,6 +13,9 @@ const plexSansKr = IBM_Plex_Sans_KR({
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   display: "swap",
+  // 한글 폰트는 unicode-range로 수백 조각(굵기 4개 × 약 90개)으로 나뉩니다. preload를 켜면 페이지에 쓰이지 않는
+  // 조각까지 모두 미리 받으므로(홈 기준 약 2.1MB), 끄고 브라우저가 필요한 조각만 받게 합니다.
+  preload: false,
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -19,11 +25,13 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: SITE_URL,
   title: {
-    default: "yusi_blog",
-    template: "%s | yusi_blog",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: "만들면서 부딪힌 문제를 커밋처럼 기록하는 프론트엔드 로그",
+  description: SITE_DESCRIPTION,
+  twitter: { card: "summary" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -36,8 +44,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        {/* 하위 페이지의 alternates(canonical)가 레이아웃 값을 덮어쓰므로 피드 링크는 직접 둡니다. */}
+        <link rel="alternate" type="application/rss+xml" title={SITE_NAME} href={FEED_PATH} />
       </head>
-      <body className="flex min-h-dvh flex-col">{children}</body>
+      <body className="flex min-h-dvh flex-col">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-3 focus:text-bg"
+        >
+          본문으로 건너뛰기
+        </a>
+        <SiteHeader />
+        <main id="main" className="mx-auto flex w-full max-w-content flex-1 flex-col px-5 md:px-10">
+          {children}
+        </main>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

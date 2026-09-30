@@ -35,7 +35,13 @@
 
 ```bash
 pnpm install
+cp .env.example .env.local   # Neon dev 브랜치의 연결 문자열로 채우기
+pnpm db:check                # DB 연결 확인 (엔드포인트 ID를 .env.local의 SEED_ALLOWED_ENDPOINT에 적기)
+pnpm db:migrate && pnpm db:seed   # 스키마 적용, 개발용 데이터
 pnpm dev
 ```
+
+- `.env.local`에는 운영이 아닌 Neon `dev` 브랜치의 연결 문자열만 둡니다. Vercel의 Development 환경 변수는 운영 DB를 가리킬 수 있으므로 `vercel env pull`은 쓰지 않습니다.
+- DB 스키마를 바꾸는 방법은 [작업 흐름](docs/CONTRIBUTING.md#db-스키마-변경)을 참고합니다.
 
 [http://localhost:3000](http://localhost:3000)에서 확인할 수 있습니다.

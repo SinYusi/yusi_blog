@@ -11,7 +11,8 @@ concurrency:
 
 jobs:
   check:
-    name: Lint, typecheck, build
+    # 빌드 검증은 실제 DB 브랜치와 함께 도는 Vercel 미리보기 빌드가 맡습니다 (ADR-0007).
+    name: Lint, typecheck
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,8 +39,3 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
-
-      - name: Build
-        run: pnpm build
-        env:
-          NEXT_TELEMETRY_DISABLED: 1
