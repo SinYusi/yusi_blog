@@ -46,8 +46,9 @@ reviews:
   path_filters:
     - "!pnpm-lock.yaml"
     - "!next-env.d.ts"
-    # drizzle-kit이 생성하는 스냅샷. 사람이 고치지 않고, 리뷰는 같은 PR의 SQL 마이그레이션에서 합니다.
-    - "!drizzle/meta/**"
+    # drizzle-kit이 생성하는 스키마 스냅샷. 사람이 고치지 않고, 리뷰는 같은 PR의 SQL 마이그레이션에서 합니다.
+    # 적용 순서를 정하는 drizzle/meta/_journal.json은 리뷰 대상에 남깁니다.
+    - "!drizzle/meta/*_snapshot.json"
 
   path_instructions:
     - path: "src/**/*.{ts,tsx}"
