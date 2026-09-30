@@ -32,6 +32,8 @@ export type PostListItem = {
   title: string;
   summary: string;
   publishedAt: Date;
+  /** 발행 시각과 수정 시각 중 늦은 쪽. 발행 전에 고친 예약 글도 발행 시각보다 앞서지 않습니다 (sitemap, RSS) */
+  modifiedAt: Date;
   tags: { slug: string; name: string }[];
 };
 
@@ -48,16 +50,17 @@ async function getPublicPostList() {
   const rows = await getDb().query.posts.findMany({
     where: isPublic,
     orderBy: [desc(posts.publishedAt), desc(posts.id)],
-    columns: { slug: true, title: true, summary: true, publishedAt: true },
+    columns: { slug: true, title: true, summary: true, publishedAt: true, updatedAt: true },
     with: {
       postTags: { with: { tag: { columns: { slug: true, name: true } } } },
     },
   });
 
-  return rows.map(({ postTags: links, publishedAt, ...post }): PostListItem => ({
+  return rows.map(({ postTags: links, publishedAt, updatedAt, ...post }): PostListItem => ({
     ...post,
     // isPublic 조건상 발행 시각은 항상 있습니다.
     publishedAt: publishedAt!,
+    modifiedAt: latestOf(publishedAt!, updatedAt),
     tags: links.map((link) => link.tag).sort((a, b) => a.name.localeCompare(b.name, "ko")),
   }));
 }
@@ -116,12 +119,23 @@ export async function getPublicPostSlugs() {
   return (await getPublicPostList()).map((post) => post.slug);
 }
 
+function latestOf(a: Date, b: Date) {
+  return a > b ? a : b;
+}
+
+/** 목록에 담긴 글 중 가장 늦은 수정 시각 (sitemap의 목록 lastModified, RSS lastBuildDate) */
+export function latestModifiedAt(items: PostListItem[]) {
+  return items.reduce<Date | undefined>(
+    (latest, post) => (latest ? latestOf(latest, post.modifiedAt) : post.modifiedAt),
+    undefined,
+  );
+}
+
 export type SeriesNeighbor = { slug: string; title: string };
 
 export type PostDetail = PostListItem & {
   html: string;
   toc: TocItem[];
-  updatedAt: Date;
   series: {
     slug: string;
     name: string;
@@ -190,7 +204,7 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
     title: post.title,
     summary: post.summary,
     publishedAt: post.publishedAt!,
-    updatedAt: post.updatedAt,
+    modifiedAt: latestOf(post.publishedAt!, post.updatedAt),
     tags: post.postTags.map((link) => link.tag).sort((a, b) => a.name.localeCompare(b.name, "ko")),
     html,
     toc,

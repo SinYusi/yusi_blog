@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 
 import { PostsPageView } from "@/components/posts/posts-page-view";
 import { getPostsPage } from "@/lib/content/posts";
+import { pageMetadata } from "@/lib/site";
 
 /*
  * 2페이지부터의 글 목록. 1페이지는 /posts가 대표 주소입니다.
@@ -23,7 +24,9 @@ export async function generateMetadata({
   params,
 }: PageProps<"/posts/page/[page]">): Promise<Metadata> {
   const page = parsePage((await params).page);
-  return page === null ? {} : { title: `모든 글 (${page}페이지)` };
+  return page === null
+    ? {}
+    : pageMetadata({ title: `모든 글 (${page}페이지)`, path: `/posts/page/${page}` });
 }
 
 export default async function PostsPageN({ params }: PageProps<"/posts/page/[page]">) {

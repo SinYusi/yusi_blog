@@ -3,6 +3,7 @@ import { IBM_Plex_Sans_KR, JetBrains_Mono } from "next/font/google";
 
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { FEED_PATH, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { DEFAULT_THEME, themeInitScript } from "@/lib/theme";
 
 import "./globals.css";
@@ -24,11 +25,13 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: SITE_URL,
   title: {
-    default: "yusi_blog",
-    template: "%s | yusi_blog",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: "만들면서 부딪힌 문제를 커밋처럼 기록하는 프론트엔드 로그",
+  description: SITE_DESCRIPTION,
+  twitter: { card: "summary" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -41,6 +44,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        {/* 하위 페이지의 alternates(canonical)가 레이아웃 값을 덮어쓰므로 피드 링크는 직접 둡니다. */}
+        <link rel="alternate" type="application/rss+xml" title={SITE_NAME} href={FEED_PATH} />
       </head>
       <body className="flex min-h-dvh flex-col">
         <a
