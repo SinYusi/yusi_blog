@@ -40,6 +40,7 @@ chore/2-workflow  ─┘
    | 문서   | `documentation` | 목적, 작업 내용, 완료 기준 |
 
 2. **브랜치 생성:** 최신 `dev`에서 이슈 번호를 포함한 브랜치를 만듭니다.
+   - 브랜치를 바꾼 뒤에는 `pnpm install --frozen-lockfile`을 실행합니다. `node_modules`는 브랜치를 바꿔도 그대로 남아서, 다른 브랜치에서 설치한 패키지 때문에 로컬 빌드는 통과하고 Vercel 빌드만 실패할 수 있습니다(#24에서 `tsx`가 `package.json`에 빠져 있던 사례).
 3. **작업:** 작업 단위마다 커밋합니다. 커밋하기 전에 `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`를 통과시킵니다.
 4. **PR 생성:** `dev`를 대상으로 PR을 만듭니다. PR 템플릿을 채우고, 본문에 `Closes #이슈번호`를 넣어 머지되면 이슈가 자동으로 닫히게 합니다.
 5. **AI 리뷰:** PR을 열면 CodeRabbit이 자동으로 리뷰합니다. 이후 push에는 자동 리뷰가 실행되지 않으므로(CodeRabbit 한도 절약), 리뷰가 달리지 않거나 다시 받아야 하면 코멘트로 요청합니다. Codex는 자동 리뷰를 끄고 코멘트로만 요청합니다.
