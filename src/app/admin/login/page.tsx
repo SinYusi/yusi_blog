@@ -21,7 +21,13 @@ function safeCallback(value: string | string[] | undefined) {
 async function LoginForm({ searchParams }: PageProps<"/admin/login">) {
   const { error, callbackUrl } = await searchParams;
   const redirectTo = safeCallback(callbackUrl);
-  const message = typeof error === "string" ? (ERROR_MESSAGES[error] ?? DEFAULT_ERROR) : null;
+  // 등록된 코드만 찾습니다. 일반 객체 조회는 프로토타입까지 보므로 ?error=__proto__ 같은 값을 막습니다.
+  const message =
+    typeof error === "string"
+      ? Object.hasOwn(ERROR_MESSAGES, error)
+        ? ERROR_MESSAGES[error]
+        : DEFAULT_ERROR
+      : null;
 
   return (
     <>
