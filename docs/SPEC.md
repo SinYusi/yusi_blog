@@ -96,22 +96,30 @@ users        id, github_id, name, avatar_url, role
 images       id, url, width, height, alt, post_id, created_at
 ```
 
-## 6. 디렉터리 구조 (초안)
+## 6. 디렉터리 구조
 
 ```
 src/
   app/
-    (blog)/         공개 블로그 라우트
-    admin/          관리자 CMS 라우트
-    api/            Route Handlers (OG 이미지, RSS 등)
+    (site)/         공개 블로그 라우트 (공개 머리글·바닥글 레이아웃)
+    admin/          관리자 CMS 라우트 (login, (panel): 사이드바 레이아웃)
+    api/auth/       Auth.js 라우트
+    feed.xml/       RSS (Route Handler), sitemap.ts, robots.ts
+    globals.css     디자인 토큰 (@theme)
+  auth.ts           Auth.js 설정 (ADR-0009)
+  proxy.ts          /admin 앞단 세션 확인
   components/
-    ui/             디자인 시스템 기본 컴포넌트
-    blog/           블로그 전용 컴포넌트
-    editor/         Tiptap 에디터와 확장
+    layout/         머리글, 바닥글, 메뉴, 404
+    posts/          글 목록 컴포넌트
+    post/           글 상세 컴포넌트 (목차, 코드 복사, 시리즈)
+    admin/          관리자 컴포넌트
+  db/               Drizzle 스키마, 연결, 시드 데이터
   lib/
-    db/             Drizzle 스키마, 쿼리
-    auth/           인증 설정
-  styles/           디자인 토큰
+    content/        공개 글 조회('use cache'), 본문 렌더링
+    admin/          관리자 데이터 조회 (requireAdmin 확인)
+    auth/           관리자 확인 (requireAdmin)
+scripts/            마이그레이션, 시드, DB 확인, 색 대비 검사
+drizzle/            SQL 마이그레이션
 docs/               스펙, 로드맵, ADR
 ```
 
