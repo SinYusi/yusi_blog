@@ -8,6 +8,13 @@
       "when": 1790572602886,
       "tag": "0000_init_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790942805575,
+      "tag": "0001_post_slug_redirects",
+      "breakpoints": true
     }
   ]
 }

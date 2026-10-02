@@ -102,6 +102,24 @@ export const postTags = pgTable(
   ],
 );
 
+/*
+ * 발행된 글의 slug를 바꾸면 이전 주소를 새 주소로 영구 이동(308)시키기 위해 이전 slug를 남깁니다 (ADR-0012).
+ * 글 id를 가리키므로 slug를 여러 번 바꿔도 이전 주소는 모두 현재 slug로 한 번에 이동합니다.
+ * 글을 지우면 함께 지워집니다.
+ */
+export const postSlugRedirects = pgTable(
+  "post_slug_redirects",
+  {
+    oldSlug: text("old_slug").primaryKey(),
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // 글 삭제 시 연쇄 삭제할 행을 찾는 데 씁니다.
+  (table) => [index("post_slug_redirects_post_id_idx").on(table.postId)],
+);
+
 export const seriesRelations = relations(series, ({ many }) => ({
   posts: many(posts),
 }));
@@ -118,6 +136,10 @@ export const tagsRelations = relations(tags, ({ many }) => ({
 export const postTagsRelations = relations(postTags, ({ one }) => ({
   post: one(posts, { fields: [postTags.postId], references: [posts.id] }),
   tag: one(tags, { fields: [postTags.tagId], references: [tags.id] }),
+}));
+
+export const postSlugRedirectsRelations = relations(postSlugRedirects, ({ one }) => ({
+  post: one(posts, { fields: [postSlugRedirects.postId], references: [posts.id] }),
 }));
 
 export type Post = typeof posts.$inferSelect;
