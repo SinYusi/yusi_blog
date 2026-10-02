@@ -112,6 +112,7 @@
 
   --container-article: 42.5rem;
   --container-content: 68rem;
+  --container-admin-sidebar: 15rem;
 }
 
 @layer base {

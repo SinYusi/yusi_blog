@@ -10,3 +10,18 @@ const dateFormatter = new Intl.DateTimeFormat("en-CA", {
 export function formatDate(date: Date) {
   return dateFormatter.format(date);
 }
+
+const dateTimeFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** 2026-10-05 09:00 형식 (한국 시간) */
+export function formatDateTime(date: Date) {
+  return dateTimeFormatter.format(date).replace(", ", " ");
+}
