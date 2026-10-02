@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { PostStateBadge } from "@/components/admin/post-state-badge";
 import {
   ADMIN_POST_STATES,
   getAdminPosts,
@@ -20,12 +21,6 @@ const FILTERS = [
   { state: "scheduled", label: "예약" },
 ] as const satisfies { state: AdminPostState | null; label: string }[];
 
-const STATE_BADGE: Record<AdminPostState, { label: string; dot: string; text: string }> = {
-  published: { label: "발행", dot: "bg-success", text: "text-success" },
-  scheduled: { label: "예약", dot: "bg-date", text: "text-date" },
-  draft: { label: "초안", dot: "bg-muted", text: "text-muted" },
-};
-
 function parseState(value: string | string[] | undefined): AdminPostState | null {
   return typeof value === "string" && (ADMIN_POST_STATES as readonly string[]).includes(value)
     ? (value as AdminPostState)
@@ -38,18 +33,6 @@ function filterHref(state: AdminPostState | null, query: string) {
   if (query) params.set("q", query);
   const search = params.toString();
   return search ? `/admin?${search}` : "/admin";
-}
-
-function StateBadge({ state }: { state: AdminPostState }) {
-  const badge = STATE_BADGE[state];
-  return (
-    <span
-      className={`inline-flex items-center gap-2 rounded-full border border-border-strong px-3 py-1 font-mono text-caption ${badge.text}`}
-    >
-      <span aria-hidden="true" className={`size-2 rounded-full ${badge.dot}`} />
-      {badge.label}
-    </span>
-  );
 }
 
 function PublishedCell({ post }: { post: AdminPostRow }) {
@@ -66,9 +49,19 @@ async function PostTable({ searchParams }: PageProps<"/admin">) {
   const state = parseState(params.status);
   const query = typeof params.q === "string" ? params.q : "";
   const { items, counts } = await getAdminPosts({ state, query });
+  // 삭제 액션이 글 목록으로 보내면서 붙입니다 (posts/actions.ts).
+  const deleted = params.deleted === "1";
 
   return (
     <>
+      {deleted && (
+        <p
+          role="status"
+          className="rounded-lg border border-success px-4 py-3 text-body text-success"
+        >
+          글을 삭제했습니다.
+        </p>
+      )}
       <div className="flex flex-col gap-3 border-b border-border md:flex-row md:items-end md:justify-between">
         <nav aria-label="상태 필터" className="flex gap-6 overflow-x-auto">
           {FILTERS.map((filter) => (
@@ -142,7 +135,12 @@ async function PostTable({ searchParams }: PageProps<"/admin">) {
                 <tr key={post.id} className="border-b border-border">
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap items-baseline gap-x-3">
-                      <span className="text-body font-semibold">{post.title}</span>
+                      <Link
+                        href={`/admin/posts/${post.id}`}
+                        className="inline-flex min-h-11 items-center text-body font-semibold hover:text-accent-hover"
+                      >
+                        {post.title}
+                      </Link>
                       {post.state === "published" && (
                         <Link
                           href={postPath(post.slug)}
@@ -160,7 +158,7 @@ async function PostTable({ searchParams }: PageProps<"/admin">) {
                     )}
                   </td>
                   <td className="px-4 py-4">
-                    <StateBadge state={post.state} />
+                    <PostStateBadge state={post.state} />
                   </td>
                   <td className="px-4 py-4 font-mono text-meta whitespace-nowrap text-muted">
                     <PublishedCell post={post} />

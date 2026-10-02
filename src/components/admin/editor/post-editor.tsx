@@ -1,6 +1,6 @@
 "use client";
 
-import { Extension, type Editor } from "@tiptap/core";
+import { Extension, type Editor, type JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -327,7 +327,25 @@ function Preview({ result, pending }: { result: PreviewResult | null; pending: b
   );
 }
 
-export function PostEditor() {
+const editorAttributes = {
+  role: "textbox",
+  "aria-multiline": "true",
+  "aria-label": "본문",
+  class: "prose-article min-h-96 px-5 py-6 focus:outline-none md:px-8",
+};
+
+export function PostEditor({
+  initialContent,
+  onEditorChange,
+  errorId,
+}: {
+  /** 편집할 글의 에디터 원본. 없으면 빈 문서로 시작합니다. */
+  initialContent?: JSONContent | null;
+  /** 에디터가 만들어지거나 사라질 때 알립니다. 글 저장 폼이 저장할 때 editor.getJSON()을 읽는 데 씁니다. */
+  onEditorChange?: (editor: Editor | null) => void;
+  /** 본문 오류 메시지의 id. 있으면 본문 입력 영역을 aria-invalid로 표시하고 메시지와 연결합니다. */
+  errorId?: string;
+} = {}) {
   const openLinkRef = useRef<() => void>(() => {});
   const previewRequestRef = useRef(0);
   const [link, setLink] = useState<{ href: string } | null>(null);
@@ -353,15 +371,21 @@ export function PostEditor() {
         },
       }),
     ],
+    // 처음 만들 때만 읽습니다. 저장한 뒤 다시 그려져도 쓰고 있던 문서를 덮어쓰지 않습니다.
+    content: initialContent ?? undefined,
+    // 본문 오류가 있으면 입력 영역(contenteditable)을 aria-invalid로 표시하고 메시지와 연결합니다.
+    // useEditor는 렌더링마다 바뀐 옵션을 setOptions로 반영하므로 오류가 생기고 사라질 때도 따라 바뀝니다.
     editorProps: {
-      attributes: {
-        role: "textbox",
-        "aria-multiline": "true",
-        "aria-label": "본문",
-        class: "prose-article min-h-96 px-5 py-6 focus:outline-none md:px-8",
-      },
+      attributes: errorId
+        ? { ...editorAttributes, "aria-invalid": "true", "aria-describedby": errorId }
+        : editorAttributes,
     },
   });
+
+  useEffect(() => {
+    onEditorChange?.(editor);
+    return () => onEditorChange?.(null);
+  }, [editor, onEditorChange]);
 
   function openLinkForm() {
     if (!editor) return;
