@@ -21,8 +21,8 @@ import {
  * 검사와 쓰기를 한 트랜잭션에서 하고, 그 사이에 다른 요청이 같은 값을 먼저 쓰면 DB 제약 위반을 같은 필드 오류로 바꿉니다.
  */
 
-/** 저장할 본문. null이면 기존 본문을 그대로 둡니다(에디터 원본이 없는 글). */
-export type PostContent = { json: unknown; html: string } | null;
+/** 저장할 본문. null이면 기존 본문을 그대로 둡니다(에디터 원본이 없는 글). empty는 실제 내용이 없는 문서인지입니다. */
+export type PostContent = { json: unknown; html: string; empty: boolean } | null;
 
 export type SavePostResult =
   | { ok: true; id: number; slug: string; changed: boolean }
@@ -218,7 +218,9 @@ export async function savePost({
         now,
       );
       const contentHtml = content ? content.html : (existing?.contentHtml ?? "");
-      if (status !== "draft" && !contentHtml.trim()) {
+      // 새 본문은 문서로 판단하고(빈 목록·인용만 있는 문서도 비었다고 봄), 기존 본문을 유지하면 저장된 HTML로 판단합니다.
+      const bodyEmpty = content ? content.empty : !contentHtml.trim();
+      if (status !== "draft" && bodyEmpty) {
         throw new FieldValidationError({ content: "발행하거나 예약하려면 본문을 입력하세요." });
       }
 
