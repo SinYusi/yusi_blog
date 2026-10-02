@@ -221,6 +221,17 @@
     margin-top: 0.4em;
   }
 
+  /* 인용: 왼쪽 선과 한 단계 낮은 글자색으로 본문과 구분 (에디터의 인용 블록) */
+  .prose-article :where(blockquote) {
+    padding-left: --spacing(4);
+    border-left: 2px solid var(--border-strong);
+    color: var(--fg-secondary);
+  }
+
+  .prose-article :where(blockquote > * + *, li > * + *) {
+    margin-top: 0.75em;
+  }
+
   .prose-article :where(:not(pre) > code) {
     padding: 0.15em 0.4em;
     border-radius: var(--radius-sm);

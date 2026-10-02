@@ -16,6 +16,7 @@
 | [0007](0007-build-verification-on-vercel.md) | 빌드 검증은 Vercel 미리보기 빌드로            | 승인 |
 | [0008](0008-replace-gemini-with-codex.md)    | Gemini 리뷰를 Codex 코드 리뷰로 교체          | 승인 |
 | [0009](0009-admin-auth.md)                   | 관리자 인증: Auth.js + GitHub OAuth, JWT 세션 | 승인 |
+| [0011](0011-editor-content-format.md)        | 에디터 본문 저장 형식과 HTML 생성             | 승인 |
 
 ## 작성 방법
 
