@@ -58,9 +58,12 @@ export default function LoginPage(props: PageProps<"/admin/login">) {
   return (
     <main id="main" className="flex min-h-dvh items-center justify-center px-5 py-10">
       <section className="flex w-full max-w-100 flex-col gap-6 rounded-2xl border border-border bg-surface p-8 md:p-10">
-        <Link href="/" className="w-fit font-mono text-body-lg font-bold">
+        <Link
+          href="/"
+          className="inline-flex min-h-11 w-fit items-center font-mono text-body-lg font-bold"
+        >
           <span className="text-accent">~/</span>yusi_blog
-          <span aria-hidden="true" className="ml-2 inline-block h-5 w-2 translate-y-1 bg-accent" />
+          <span aria-hidden="true" className="ml-2 inline-block h-5 w-2 bg-accent" />
         </Link>
         <div className="flex flex-col gap-2">
           <h1 className="text-h2">관리자 로그인</h1>

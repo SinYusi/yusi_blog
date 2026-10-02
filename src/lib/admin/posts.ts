@@ -12,7 +12,7 @@ import { requireAdmin } from "@/lib/auth/admin";
  */
 
 /**
- * 화면에 보이는 상태. 예약 글은 발행 시각이 지나면 공개 페이지와 같은 기준(isPublic)으로 '발행'입니다.
+ * 화면에 보이는 상태. 공개 페이지와 같은 기준(isPublic)으로, 발행 시각이 지난 비초안 글만 '발행'입니다.
  */
 export type AdminPostState = "draft" | "scheduled" | "published";
 
@@ -29,10 +29,11 @@ export type AdminPostRow = {
   tags: string[];
 };
 
+// 공개 조건(posts.ts의 isPublic)과 같은 기준: 초안이 아니고 발행 시각이 지난 글만 '발행'입니다.
+// 상태가 published여도 발행 시각이 미래면 아직 공개되지 않으므로 '예약'으로 봅니다.
 function toState(status: "draft" | "scheduled" | "published", publishedAt: Date | null, now: Date) {
   if (status === "draft") return "draft";
-  if (status === "scheduled" && (!publishedAt || publishedAt > now)) return "scheduled";
-  return "published";
+  return publishedAt && publishedAt <= now ? "published" : "scheduled";
 }
 
 export async function getAdminPosts({
