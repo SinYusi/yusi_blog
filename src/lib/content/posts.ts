@@ -4,7 +4,7 @@ import { and, asc, count, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { getDb } from "@/db";
-import { posts, postTags, series, tags } from "@/db/schema";
+import { posts, postSlugRedirects, postTags, series, tags } from "@/db/schema";
 
 import { renderPostHtml, type TocItem } from "./render";
 
@@ -210,4 +210,27 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
     toc,
     series: seriesInfo,
   };
+}
+
+/**
+ * 이전 주소(바뀌기 전 slug) → 지금 slug (ADR-0012). 글 상세가 없는 slug일 때 영구 이동(308)할 곳을 찾습니다.
+ * 공개된 글로 가는 경우만 돌려주므로, 글이 초안으로 돌아가면 이전 주소도 404가 됩니다.
+ */
+export async function getRedirectedSlug(oldSlug: string): Promise<string | null> {
+  "use cache";
+  cacheTag(CONTENT_CACHE_TAG, `post:${oldSlug}`);
+
+  const [row] = await getDb()
+    .select({ slug: posts.slug })
+    .from(postSlugRedirects)
+    .innerJoin(posts, eq(posts.id, postSlugRedirects.postId))
+    .where(and(eq(postSlugRedirects.oldSlug, oldSlug), isPublic))
+    .limit(1);
+  // 없는 주소는 slug를 바꾼 직후 생길 수 있으므로 getPostBySlug의 null처럼 짧게 캐시합니다.
+  if (!row) {
+    cacheLife("minutes");
+    return null;
+  }
+  cacheLife("hours");
+  return row.slug;
 }
