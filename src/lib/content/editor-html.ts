@@ -74,9 +74,16 @@ function assignHeadingIds(doc: ProseMirrorNode) {
 }
 
 // 빈 문단·소제목은 출력하지 않습니다. 에디터는 문서 끝에 빈 문단을 항상 두고(TrailingNode),
-// 빈 소제목은 목차에 빈 항목을 만들기 때문입니다.
+// 빈 소제목은 목차에 빈 항목을 만들기 때문입니다. 공백 글자와 줄바꿈(hardBreak)만 있는 블록도 비어 있다고 봅니다.
+// 그 밖의 인라인 노드(예: 이미지)가 생기면 내용으로 보고 남깁니다.
 function isBlank(node: ProseMirrorNode) {
-  return node.textContent.trim() === "" && !node.firstChild?.isLeaf;
+  let blank = true;
+  node.forEach((child) => {
+    if (child.isText ? (child.text ?? "").trim() !== "" : child.type.name !== "hardBreak") {
+      blank = false;
+    }
+  });
+  return blank;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -98,6 +105,16 @@ function parseEditorDoc(json: unknown) {
   }
 
   doc.descendants((node) => {
+    // check()는 속성 값의 타입을 보지 않습니다. 문자열이 아닌 href는 Link 렌더러에서 예외를 내므로 여기서 거부합니다.
+    for (const mark of node.marks) {
+      if (
+        mark.type.name === "link" &&
+        mark.attrs.href !== null &&
+        typeof mark.attrs.href !== "string"
+      ) {
+        throw new InvalidEditorContentError("링크 href는 문자열이어야 합니다.");
+      }
+    }
     if (
       node.type.name === "heading" &&
       !(HEADING_LEVELS as readonly unknown[]).includes(node.attrs.level)

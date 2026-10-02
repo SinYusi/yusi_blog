@@ -8,6 +8,15 @@ import { previewPost, type PreviewResult } from "@/app/admin/(panel)/posts/actio
 import { createEditorExtensions } from "@/lib/editor/extensions";
 
 import { EditorSkeleton } from "./editor-skeleton";
+import {
+  LINK_KEYS,
+  separatorClass,
+  TOOLBAR_BUTTONS,
+  TOOLBAR_ITEMS,
+  toolbarClass,
+  toolButtonClass,
+  type ToolId,
+} from "./toolbar-items";
 
 /*
  * 관리자 글 에디터 (Tiptap). 관리자 글 작성 페이지만 가져오므로 라우트별 코드 분할로 공개 라우트 번들에는 들어가지 않습니다.
@@ -31,89 +40,18 @@ function ariaKeyShortcuts(keys: readonly string[]) {
   return [isMac() ? "Meta" : "Control", ...keys].join("+");
 }
 
-type Tool = {
-  id: string;
-  label: string;
-  content: React.ReactNode;
-  className?: string;
-  keys: readonly string[];
-  run: (editor: Editor) => void;
+// 툴바 버튼 id → 실행할 명령. 링크는 주소 입력 창을 여는 동작이라 Toolbar에서 따로 연결합니다.
+const COMMANDS: Record<Exclude<ToolId, "link">, (editor: Editor) => void> = {
+  paragraph: (editor) => editor.chain().focus().setParagraph().run(),
+  h2: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+  h3: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+  bulletList: (editor) => editor.chain().focus().toggleBulletList().run(),
+  orderedList: (editor) => editor.chain().focus().toggleOrderedList().run(),
+  blockquote: (editor) => editor.chain().focus().toggleBlockquote().run(),
+  bold: (editor) => editor.chain().focus().toggleBold().run(),
+  italic: (editor) => editor.chain().focus().toggleItalic().run(),
+  code: (editor) => editor.chain().focus().toggleCode().run(),
 };
-
-const BLOCK_TOOLS = [
-  {
-    id: "paragraph",
-    label: "본문",
-    content: "본문",
-    keys: ["Alt", "0"],
-    run: (editor) => editor.chain().focus().setParagraph().run(),
-  },
-  {
-    id: "h2",
-    label: "소제목 2",
-    content: "H2",
-    keys: ["Alt", "2"],
-    run: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-  },
-  {
-    id: "h3",
-    label: "소제목 3",
-    content: "H3",
-    keys: ["Alt", "3"],
-    run: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
-  },
-  {
-    id: "bulletList",
-    label: "글머리 목록",
-    content: "• 목록",
-    keys: ["Shift", "8"],
-    run: (editor) => editor.chain().focus().toggleBulletList().run(),
-  },
-  {
-    id: "orderedList",
-    label: "번호 목록",
-    content: "1. 목록",
-    keys: ["Shift", "7"],
-    run: (editor) => editor.chain().focus().toggleOrderedList().run(),
-  },
-  {
-    id: "blockquote",
-    label: "인용",
-    content: "인용",
-    keys: ["Shift", "B"],
-    run: (editor) => editor.chain().focus().toggleBlockquote().run(),
-  },
-] as const satisfies Tool[];
-
-const INLINE_TOOLS = [
-  {
-    id: "bold",
-    label: "굵게",
-    content: "B",
-    className: "font-bold",
-    keys: ["B"],
-    run: (editor) => editor.chain().focus().toggleBold().run(),
-  },
-  {
-    id: "italic",
-    label: "기울임",
-    content: "I",
-    className: "italic",
-    keys: ["I"],
-    run: (editor) => editor.chain().focus().toggleItalic().run(),
-  },
-  {
-    id: "code",
-    label: "인라인 코드",
-    content: "</>",
-    keys: ["E"],
-    run: (editor) => editor.chain().focus().toggleCode().run(),
-  },
-] as const satisfies Tool[];
-
-const LINK_KEYS = ["K"] as const;
-
-type ToolId = (typeof BLOCK_TOOLS)[number]["id"] | (typeof INLINE_TOOLS)[number]["id"] | "link";
 
 function selectActive({ editor }: { editor: Editor }): Record<ToolId, boolean> {
   return {
@@ -130,9 +68,6 @@ function selectActive({ editor }: { editor: Editor }): Record<ToolId, boolean> {
   };
 }
 
-const toolButtonClass =
-  "inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg px-3 font-mono text-meta text-muted hover:bg-surface hover:text-fg aria-pressed:bg-surface aria-pressed:font-semibold aria-pressed:text-fg";
-
 const modeButtonClass =
   "inline-flex min-h-11 cursor-pointer items-center rounded-lg px-4 text-body text-muted hover:text-fg aria-pressed:bg-surface aria-pressed:font-semibold aria-pressed:text-fg";
 
@@ -143,19 +78,6 @@ function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
   const active = useEditorState({ editor, selector: selectActive });
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const [focusIndex, setFocusIndex] = useState(0);
-
-  const tools: (Tool | "separator")[] = [
-    ...BLOCK_TOOLS,
-    "separator",
-    ...INLINE_TOOLS,
-    {
-      id: "link",
-      label: "링크",
-      content: "링크",
-      keys: LINK_KEYS,
-      run: onLink,
-    },
-  ];
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const buttons = buttonsRef.current.filter((button) => button !== null);
@@ -184,26 +106,15 @@ function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
     buttons[next].focus();
   }
 
-  let buttonIndex = -1;
   return (
-    <div
-      role="toolbar"
-      aria-label="서식"
-      onKeyDown={handleKeyDown}
-      className="sticky top-0 z-10 flex flex-wrap items-center gap-1 rounded-xl border border-border bg-bg p-1"
-    >
-      {tools.map((tool, position) => {
+    <div role="toolbar" aria-label="서식" onKeyDown={handleKeyDown} className={toolbarClass}>
+      {TOOLBAR_ITEMS.map((tool, position) => {
         if (tool === "separator") {
           return (
-            <span
-              key={`separator-${position}`}
-              aria-hidden="true"
-              className="mx-1 h-6 w-px bg-border"
-            />
+            <span key={`separator-${position}`} aria-hidden="true" className={separatorClass} />
           );
         }
-        buttonIndex += 1;
-        const index = buttonIndex;
+        const index = TOOLBAR_BUTTONS.indexOf(tool);
         const shortcut = shortcutLabel(tool.keys);
         return (
           <button
@@ -215,11 +126,12 @@ function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
             tabIndex={index === focusIndex ? 0 : -1}
             aria-label={tool.label}
             aria-keyshortcuts={ariaKeyShortcuts(tool.keys)}
-            aria-pressed={active[tool.id as ToolId]}
+            aria-pressed={active[tool.id]}
             title={`${tool.label} (${shortcut})`}
             onClick={() => {
               setFocusIndex(index);
-              tool.run(editor);
+              if (tool.id === "link") onLink();
+              else COMMANDS[tool.id](editor);
             }}
             className={`${toolButtonClass} ${tool.className ?? ""}`}
           >
@@ -229,6 +141,17 @@ function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
       })}
     </div>
   );
+}
+
+/**
+ * 직접 입력한 주소 정리. 프로토콜 없는 외부 주소(example.com/path)는 https://를 붙입니다.
+ * defaultProtocol은 자동 링크·붙여넣기에만 적용되어, 그대로 두면 공개 페이지에서 상대 경로로 해석되기 때문입니다.
+ * 프로토콜이 있는 주소, 상대 경로(/, ./, ../), #앵커, ?쿼리는 그대로 둡니다.
+ */
+function normalizeHref(value: string) {
+  if (!value || /^[a-z][a-z0-9+.-]*:/i.test(value) || /^(\/|\.\.?\/|#|\?)/.test(value))
+    return value;
+  return /^[^\s/?#]+\.[^\s/?#]+/.test(value) ? `https://${value}` : value;
 }
 
 /** 링크 주소 입력. Enter로 적용, Esc로 닫고 본문으로 돌아갑니다. 주소를 비우고 적용하면 링크를 지웁니다. */
@@ -257,7 +180,7 @@ function LinkForm({
 
   function apply(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const value = href.trim();
+    const value = normalizeHref(href.trim());
 
     if (!value) {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
@@ -265,23 +188,25 @@ function LinkForm({
       return;
     }
 
-    const chain = editor.chain().focus();
-    const applied =
-      editor.state.selection.empty && !editor.isActive("link")
-        ? // 선택한 글자가 없으면 주소 자체를 링크 글자로 넣습니다.
-          chain
-            .insertContent({
-              type: "text",
-              text: value,
-              marks: [{ type: "link", attrs: { href: value } }],
-            })
-            .run()
-        : chain.extendMarkRange("link").setLink({ href: value }).run();
-
-    if (!applied) {
+    // 두 적용 경로 모두 문서를 바꾸기 전에 Link 확장의 주소 검사(setLink)를 먼저 통과해야 합니다.
+    if (!editor.can().setLink({ href: value })) {
       setError("쓸 수 없는 주소입니다. http(s), mailto, 상대 경로, #앵커를 쓸 수 있습니다.");
       inputRef.current?.focus();
       return;
+    }
+
+    const chain = editor.chain().focus();
+    if (editor.state.selection.empty && !editor.isActive("link")) {
+      // 선택한 글자가 없으면 주소 자체를 링크 글자로 넣습니다.
+      chain
+        .insertContent({
+          type: "text",
+          text: value,
+          marks: [{ type: "link", attrs: { href: value } }],
+        })
+        .run();
+    } else {
+      chain.extendMarkRange("link").setLink({ href: value }).run();
     }
     onClose();
   }
@@ -440,7 +365,16 @@ export function PostEditor() {
     // 미리보기를 연달아 누르면 마지막 요청의 결과만 보여 줍니다.
     const requestId = ++previewRequestRef.current;
     startTransition(async () => {
-      const result = await previewPost(current.getJSON());
+      let result: PreviewResult;
+      try {
+        result = await previewPost(current.getJSON());
+      } catch {
+        // 네트워크 오류나 서버 오류로 실패해도 로딩을 끝내고, 이전 결과 대신 오류를 보여 줍니다.
+        result = {
+          ok: false,
+          message: "미리보기를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        };
+      }
       if (requestId !== previewRequestRef.current) return;
       // await 뒤의 상태 변경은 다시 startTransition으로 감싸야 같은 전환으로 묶입니다 (React 19).
       startTransition(() => setPreview(result));
