@@ -18,7 +18,7 @@
 | 프레임워크      | Next.js (App Router) + TypeScript     | RSC, SSG/ISR, Server Actions를 한 프로젝트에서 모두 다룸 ([ADR-0001](adr/0001-nextjs-app-router.md)) |
 | 스타일          | Tailwind CSS + 자체 UI 컴포넌트       | UI 라이브러리 대신 디자인 토큰과 컴포넌트를 직접 구축                                                |
 | DB / ORM        | PostgreSQL(Neon) + Drizzle ORM        | 타입 안전한 쿼리, 서버리스 환경 적합 ([ADR-0002](adr/0002-self-hosted-cms.md))                       |
-| 인증            | Auth.js (GitHub OAuth)                | 관리자 1인 인증, 미들웨어 기반 라우트 보호                                                           |
+| 인증            | Auth.js (GitHub OAuth)                | 관리자 1인 인증, `proxy.ts` 기반 라우트 보호 ([ADR-0009](adr/0009-admin-auth.md))                    |
 | 에디터          | Tiptap (ProseMirror)                  | 확장을 직접 작성할 수 있는 블록 에디터                                                               |
 | 코드 하이라이트 | Shiki                                 | 서버 렌더링으로 클라이언트 JS 0                                                                      |
 | 이미지 저장소   | Cloudflare R2 또는 Vercel Blob        | `next/image`와 결합해 최적화                                                                         |
