@@ -188,7 +188,12 @@ export default function AdminPostsPage(props: PageProps<"/admin">) {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-h1">글</h1>
-        {/* 새 글 만들기는 편집 화면과 함께 추가합니다 (#38). */}
+        <Link
+          href="/admin/posts/new"
+          className="inline-flex min-h-11 items-center rounded-lg bg-fg px-4 text-body font-semibold text-bg hover:bg-fg-secondary"
+        >
+          새 글
+        </Link>
       </div>
       <Suspense fallback={<p className="text-body text-muted">글 목록을 불러오는 중입니다.</p>}>
         <PostTable {...props} />

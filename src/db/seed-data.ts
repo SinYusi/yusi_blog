@@ -1,8 +1,11 @@
 /**
  * 개발·미리보기용 시드 데이터. 이 프로젝트에서 실제로 겪은 일을 글감으로 씁니다.
  *
- * 본문 HTML 규칙 (#21의 본문 렌더링과 스타일이 이 규칙을 따릅니다)
- * - 소제목: <h2 id="...">. id는 목차 링크에 씁니다.
+ * 본문 HTML 규칙 (#21의 본문 렌더링과 스타일, 에디터의 HTML 생성(lib/content/editor-html.ts)이 이 규칙을 따릅니다)
+ * - 소제목: <h2 id="...">, <h3 id="...">. h2의 id는 목차 링크에 씁니다. id는 접두사 없이 저장하고,
+ *   렌더링 단계(render.ts)가 정화하면서 sec-를 붙입니다. 에디터 글의 id는 소제목 텍스트로 만들고(한글 허용),
+ *   문서 안에서 겹치면 -2, -3을 붙입니다.
+ * - 문단·목록·인용·링크·굵게·기울임·인라인 코드: <p>, <ul>/<ol>/<li>, <blockquote>, <a href>, <strong>, <em>, <code>
  * - 코드: <pre data-language="..." data-filename="..."><code>...</code></pre>. 하이라이트는 렌더링 단계에서 합니다.
  * - 로그: <pre data-language="log"><code>...</code></pre>
  * - 콜아웃: <aside data-callout="info|warning|danger">...</aside>

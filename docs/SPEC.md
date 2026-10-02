@@ -112,10 +112,11 @@ src/
     layout/         머리글, 바닥글, 메뉴, 404
     posts/          글 목록 컴포넌트
     post/           글 상세 컴포넌트 (목차, 코드 복사, 시리즈)
-    admin/          관리자 컴포넌트
+    admin/          관리자 컴포넌트 (editor/: Tiptap 에디터, 관리자 글 작성 페이지에서만 import)
   db/               Drizzle 스키마, 연결, 시드 데이터
   lib/
-    content/        공개 글 조회('use cache'), 본문 렌더링
+    content/        공개 글 조회('use cache'), 본문 렌더링, 에디터 JSON → 본문 HTML 변환
+    editor/         에디터 확장 구성 (관리자 에디터와 서버 HTML 변환이 공유, ADR-0011)
     admin/          관리자 데이터 조회 (requireAdmin 확인)
     auth/           관리자 확인 (requireAdmin)
 scripts/            마이그레이션, 시드, DB 확인, 색 대비 검사
