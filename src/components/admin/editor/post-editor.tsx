@@ -168,7 +168,11 @@ function normalizeHref(value: string) {
   return /^[^\s/?#]+\.[^\s/?#]+/.test(value) ? `https://${value}` : value;
 }
 
-/** 링크 주소 입력. Enter로 적용, Esc로 닫고 본문으로 돌아갑니다. 주소를 비우고 적용하면 링크를 지웁니다. */
+/**
+ * 링크 주소 입력. Enter로 적용, Esc로 닫고 본문으로 돌아갑니다. 주소를 비우고 적용하면 링크를 지웁니다.
+ * <form>이 아니라 role="group"으로 둡니다. 에디터는 글 저장 폼 안에 있어, 폼을 중첩하면 '적용'이 글 저장 폼을 제출해
+ * 글이 저장(발행 설정이면 발행)되기 때문입니다. 적용 버튼은 type="button"이고 Enter는 입력칸에서 직접 처리합니다.
+ */
 function LinkForm({
   editor,
   initialHref,
@@ -192,8 +196,7 @@ function LinkForm({
     editor.commands.focus();
   }
 
-  function apply(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function apply() {
     const value = normalizeHref(href.trim());
 
     if (!value) {
@@ -227,11 +230,13 @@ function LinkForm({
   }
 
   return (
-    <form
-      onSubmit={apply}
+    <div
+      role="group"
+      aria-label="링크 편집"
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault();
+          event.stopPropagation();
           close();
         }
       }}
@@ -252,6 +257,13 @@ function LinkForm({
             setHref(event.target.value);
             setError(null);
           }}
+          onKeyDown={(event) => {
+            // 바깥 글 저장 폼의 암묵적 제출(Enter)로 이어지지 않게 막고 링크만 적용합니다. 한글 조합 중 Enter는 글자 확정입니다.
+            if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            event.stopPropagation();
+            apply();
+          }}
           placeholder="https://"
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? "editor-link-error" : undefined}
@@ -259,7 +271,8 @@ function LinkForm({
         />
         <div className="flex shrink-0 gap-2">
           <button
-            type="submit"
+            type="button"
+            onClick={apply}
             className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-fg px-4 text-body font-semibold text-bg hover:bg-fg-secondary"
           >
             적용
@@ -278,7 +291,7 @@ function LinkForm({
           {error}
         </p>
       )}
-    </form>
+    </div>
   );
 }
 
