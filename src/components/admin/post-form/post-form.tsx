@@ -163,6 +163,9 @@ export function PostForm({
     summaryRef.current?.focus();
   }, [state]);
 
+  // 저장된 글의 주소를 바꾸는 중인지. 저장하면 refresh()로 initial.slug가 새 주소가 되어 안내가 사라집니다.
+  const slugChanged = postId !== null && slug.trim() !== initial.slug;
+
   const selectedSeries = options.series.find((item) => item.id.toString() === seriesId) ?? null;
   const otherOrders =
     selectedSeries?.orders.filter((item) => postId === null || item.postId !== postId) ?? [];
@@ -310,7 +313,7 @@ export function PostForm({
             aria-invalid={errors.slug ? true : undefined}
             aria-describedby={describedBy(
               "post-slug-hint",
-              publicSlug && slug.trim() !== publicSlug && "post-slug-redirect",
+              slugChanged && "post-slug-redirect",
               errors.slug && errorId("slug"),
             )}
             className={`${fieldClass} font-mono`}
@@ -319,10 +322,11 @@ export function PostForm({
         <p id="post-slug-hint" className={hintClass}>
           영문 소문자, 숫자, 하이픈(-)만 씁니다. 예: nextjs-cache-components
         </p>
-        {publicSlug && slug.trim() !== publicSlug && (
+        {slugChanged && (
           <p id="post-slug-redirect" className="text-caption text-date">
-            공개된 글의 주소를 바꾸면 이전 주소(/posts/{publicSlug})로 들어온 방문자는 새 주소로
-            이동합니다.
+            {publicSlug
+              ? `공개된 글의 주소를 바꾸면 이전 주소(/posts/${initial.slug})로 들어온 방문자는 새 주소로 이동합니다.`
+              : `이전 주소(/posts/${initial.slug})는 이 글 몫으로 남겨, 글이 공개 중일 때 새 주소로 이동시킵니다. 다른 글은 쓸 수 없습니다.`}
           </p>
         )}
         <FieldError field="slug" errors={errors} />

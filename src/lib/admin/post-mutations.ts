@@ -7,7 +7,6 @@ import { posts, postSlugRedirects, postTags, series, tags } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/admin";
 
 import {
-  isPubliclyVisible,
   resolvePublication,
   stableStringify,
   tagSlugFromName,
@@ -59,6 +58,7 @@ const CONSTRAINT_ERRORS: Record<string, FieldErrors> = {
   },
   tags_name_unique: { tags: "태그를 만드는 중 충돌이 났습니다. 다시 저장하세요." },
   tags_slug_unique: { tags: "태그를 만드는 중 충돌이 났습니다. 다시 저장하세요." },
+  tags_name_lower_unique: { tags: "태그를 만드는 중 충돌이 났습니다. 다시 저장하세요." },
 };
 
 /** Postgres 오류의 제약 이름. Drizzle은 드라이버 오류를 cause로 감싸므로 cause까지 확인합니다. */
@@ -152,7 +152,7 @@ async function checkConflicts(tx: Transaction, input: PostInput, id: number | nu
   if (Object.keys(errors).length > 0) throw new FieldValidationError(errors);
 }
 
-/** 태그 이름 → id. 대소문자만 다른 기존 태그는 그 태그를 쓰고, 없으면 새로 만듭니다. */
+/** 태그 이름 → id. 대소문자만 다른 기존 태그는 그 태그를 쓰고, 없으면 새로 만듭니다 (DB도 tags_name_lower_unique로 막음). */
 async function resolveTagIds(tx: Transaction, names: string[]) {
   if (names.length === 0) return [];
 
@@ -281,16 +281,16 @@ export async function savePost({
       }
 
       if (existing.slug !== input.slug) {
-        // 공개된 적이 있는 주소만 남깁니다. 초안·예약 글의 주소는 바깥에 알려지지 않았으므로 리다이렉트가 필요 없습니다.
-        if (isPubliclyVisible(existing, now)) {
-          await tx
-            .insert(postSlugRedirects)
-            .values({ oldSlug: existing.slug, postId: existing.id })
-            .onConflictDoUpdate({
-              target: postSlugRedirects.oldSlug,
-              set: { postId: existing.id, createdAt: now },
-            });
-        }
+        // 이전 주소는 상태와 상관없이 항상 이 글 몫으로 남깁니다 (ADR-0012). 지금 초안이어도 예전에 공개된 적이 있으면
+        // 바깥 링크가 남아 있을 수 있고, 다른 글이 그 주소를 가져가면 옛 링크가 엉뚱한 글로 가기 때문입니다.
+        // 이동할 글이 공개 상태가 아니면 공개 페이지는 그대로 404입니다(getRedirectedSlug).
+        await tx
+          .insert(postSlugRedirects)
+          .values({ oldSlug: existing.slug, postId: existing.id })
+          .onConflictDoUpdate({
+            target: postSlugRedirects.oldSlug,
+            set: { postId: existing.id, createdAt: now },
+          });
         // 예전 주소로 되돌린 경우: 그 주소는 다시 글이 직접 쓰므로 리다이렉트를 지웁니다.
         await tx.delete(postSlugRedirects).where(eq(postSlugRedirects.oldSlug, input.slug));
       }

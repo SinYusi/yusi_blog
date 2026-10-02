@@ -10,6 +10,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 /*
@@ -78,12 +79,19 @@ export const posts = pgTable(
   ],
 );
 
-export const tags = pgTable("tags", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  slug: text("slug").notNull().unique(),
-  name: text("name").notNull().unique(),
-  ...timestamps,
-});
+export const tags = pgTable(
+  "tags",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    slug: text("slug").notNull().unique(),
+    name: text("name").notNull().unique(),
+    ...timestamps,
+  },
+  (table) => [
+    // 대소문자만 다른 태그(Next.js, next.js)가 따로 생기지 않게 합니다. 관리자 저장도 같은 규칙으로 기존 태그에 연결합니다.
+    uniqueIndex("tags_name_lower_unique").on(sql`lower(${table.name})`),
+  ],
+);
 
 export const postTags = pgTable(
   "post_tags",

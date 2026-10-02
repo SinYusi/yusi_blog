@@ -93,9 +93,10 @@ DB 제약으로 지키는 규칙:
 
 ```
 post_slug_redirects  old_slug(PK), post_id → posts(연쇄 삭제), created_at
+tags                 unique(lower(name)) 추가: 대소문자만 다른 태그 이름 금지
 ```
 
-- 발행된 글의 slug를 바꾸면 이전 slug를 남겨 새 주소로 영구 이동(308)한다 ([ADR-0012](adr/0012-post-slug-and-redirects.md)).
+- 글의 slug를 바꾸면 이전 slug를 그 글 몫으로 남기고, 글이 공개 중이면 이전 주소를 새 주소로 영구 이동(308)한다 ([ADR-0012](adr/0012-post-slug-and-redirects.md)).
 
 관리자 저장 규칙 (`src/lib/admin/post-input.ts`, `post-mutations.ts`):
 
