@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import { previewPost, type PreviewResult } from "@/app/admin/(panel)/posts/actions";
 import { createEditorExtensions } from "@/lib/editor/extensions";
+import { serializeEditorDoc } from "@/lib/editor/transport";
 
 import { EditorSkeleton } from "./editor-skeleton";
 import {
@@ -128,6 +129,10 @@ function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
             aria-keyshortcuts={ariaKeyShortcuts(tool.keys)}
             aria-pressed={active[tool.id]}
             title={`${tool.label} (${shortcut})`}
+            // 마우스로 누를 때 초점과 선택 영역이 버튼으로 옮겨 가지 않게 합니다. 그대로 두면 명령 뒤에도
+            // 초점이 버튼에 남아, 이어서 입력한 글자가 방금 만든 블록이 아닌 곳에 들어갑니다.
+            // 키보드(Tab으로 툴바 진입 → 화살표·Enter)는 mousedown이 없으므로 영향이 없습니다.
+            onMouseDown={(event) => event.preventDefault()}
             onClick={() => {
               setFocusIndex(index);
               if (tool.id === "link") onLink();
@@ -367,7 +372,7 @@ export function PostEditor() {
     startTransition(async () => {
       let result: PreviewResult;
       try {
-        result = await previewPost(current.getJSON());
+        result = await previewPost(serializeEditorDoc(current.getJSON()));
       } catch {
         // 네트워크 오류나 서버 오류로 실패해도 로딩을 끝내고, 이전 결과 대신 오류를 보여 줍니다.
         result = {

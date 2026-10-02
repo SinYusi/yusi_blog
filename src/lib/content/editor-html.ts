@@ -9,6 +9,7 @@ import {
 } from "@tiptap/static-renderer/pm/html-string";
 
 import { createEditorExtensions, HEADING_LEVELS } from "@/lib/editor/extensions";
+import { MAX_EDITOR_JSON_BYTES } from "@/lib/editor/transport";
 
 /*
  * 에디터 원본(posts.content, Tiptap JSON)으로 공개용 본문 HTML(posts.content_html)을 만듭니다 (ADR-0011).
@@ -123,6 +124,24 @@ function parseEditorDoc(json: unknown) {
     }
   });
   return doc;
+}
+
+/**
+ * 서버 액션으로 받은 본문 JSON 문자열(lib/editor/transport.ts의 serializeEditorDoc)을 읽습니다.
+ * 문자열이 아니거나, 너무 크거나, JSON이 아니면 InvalidEditorContentError를 던집니다.
+ */
+export function parseEditorJsonString(input: unknown): unknown {
+  if (typeof input !== "string") {
+    throw new InvalidEditorContentError("본문은 JSON 문자열로 보내야 합니다.");
+  }
+  if (Buffer.byteLength(input, "utf8") > MAX_EDITOR_JSON_BYTES) {
+    throw new InvalidEditorContentError("본문이 너무 큽니다.");
+  }
+  try {
+    return JSON.parse(input);
+  } catch (error) {
+    throw new InvalidEditorContentError("본문 JSON을 읽지 못했습니다.", { cause: error });
+  }
 }
 
 /** 에디터 JSON → 공개용 본문 HTML. 형식이 잘못되면 InvalidEditorContentError를 던집니다. */
