@@ -17,6 +17,7 @@
 | [0008](0008-replace-gemini-with-codex.md)    | Gemini 리뷰를 Codex 코드 리뷰로 교체          | 승인 |
 | [0009](0009-admin-auth.md)                   | 관리자 인증: Auth.js + GitHub OAuth, JWT 세션 | 승인 |
 | [0011](0011-editor-content-format.md)        | 에디터 본문 저장 형식과 HTML 생성             | 승인 |
+| [0012](0012-post-slug-and-redirects.md)      | 글 주소(slug) 형식과 주소 변경 시 리다이렉트  | 제안 |
 
 ## 작성 방법
 
