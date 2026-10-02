@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { signIn } from "@/auth";
@@ -44,7 +45,7 @@ async function LoginForm({ searchParams }: PageProps<"/admin/login">) {
       >
         <button
           type="submit"
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-accent px-5 font-mono text-body font-semibold text-bg hover:bg-accent-hover"
+          className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-xl bg-fg px-5 text-body font-bold text-bg hover:bg-fg-secondary"
         >
           GitHub로 로그인
         </button>
@@ -55,17 +56,26 @@ async function LoginForm({ searchParams }: PageProps<"/admin/login">) {
 
 export default function LoginPage(props: PageProps<"/admin/login">) {
   return (
-    <section className="mx-auto flex w-full max-w-sm flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <p className="font-mono text-meta text-muted">
-          <span className="text-accent">$</span> sudo login
-        </p>
-        <h1 className="text-h1">관리자 로그인</h1>
-        <p className="text-body text-muted">글 작성과 관리는 작성자 계정으로만 할 수 있습니다.</p>
-      </div>
-      <Suspense>
-        <LoginForm {...props} />
-      </Suspense>
-    </section>
+    <main id="main" className="flex min-h-dvh items-center justify-center px-5 py-10">
+      <section className="flex w-full max-w-100 flex-col gap-6 rounded-2xl border border-border bg-surface p-8 md:p-10">
+        <Link href="/" className="w-fit font-mono text-body-lg font-bold">
+          <span className="text-accent">~/</span>yusi_blog
+          <span aria-hidden="true" className="ml-2 inline-block h-5 w-2 translate-y-1 bg-accent" />
+        </Link>
+        <div className="flex flex-col gap-2">
+          <h1 className="text-h2">관리자 로그인</h1>
+          <p className="text-body text-muted">허용된 GitHub 계정만 접근할 수 있습니다.</p>
+        </div>
+        <Suspense>
+          <LoginForm {...props} />
+        </Suspense>
+        <Link
+          href="/"
+          className="inline-flex min-h-11 items-center justify-center font-mono text-meta text-muted hover:text-fg"
+        >
+          ← 블로그로 돌아가기
+        </Link>
+      </section>
+    </main>
   );
 }
