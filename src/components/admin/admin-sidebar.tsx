@@ -29,7 +29,7 @@ function Icon({ d }: { d: string }) {
 
 export function AdminSidebar() {
   return (
-    <aside className="flex flex-col gap-6 border-b border-border px-4 py-6 md:sticky md:top-0 md:h-dvh md:border-r md:border-b-0 md:py-7">
+    <aside className="flex flex-col gap-6 border-b border-border px-4 py-6 lg:sticky lg:top-0 lg:h-dvh lg:border-r lg:border-b-0 lg:py-7">
       <div className="flex items-center gap-2 px-4">
         <Link
           href="/admin"
@@ -49,7 +49,7 @@ export function AdminSidebar() {
         ))}
       </nav>
 
-      <div className="flex flex-col gap-1 md:mt-auto">
+      <div className="flex flex-col gap-1 lg:mt-auto">
         <Link href="/" className={itemClass}>
           <Icon d="M14 5h5v5M19 5l-8 8M18 14v5H5V6h5" />
           블로그 보기
