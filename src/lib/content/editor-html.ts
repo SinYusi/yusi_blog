@@ -146,7 +146,20 @@ export function parseEditorJsonString(input: unknown): unknown {
 
 /** 에디터 JSON → 공개용 본문 HTML. 형식이 잘못되면 InvalidEditorContentError를 던집니다. */
 export function editorJsonToHtml(json: unknown) {
+  return renderDocToHtml(parseEditorDoc(json));
+}
+
+/**
+ * 저장용 본문. 스키마로 검사한 문서를 다시 JSON으로 바꿔(doc.toJSON) 저장하므로, 클라이언트가 덧붙인
+ * 스키마 밖의 키는 posts.content에 남지 않습니다. content_html은 이 문서로 만듭니다.
+ * 형식이 잘못되면 InvalidEditorContentError를 던집니다.
+ */
+export function prepareEditorContent(json: unknown): { json: unknown; html: string } {
   const doc = parseEditorDoc(json);
+  return { json: doc.toJSON(), html: renderDocToHtml(doc) };
+}
+
+function renderDocToHtml(doc: ProseMirrorNode) {
   const headingIds = assignHeadingIds(doc);
 
   return renderToHTMLString({

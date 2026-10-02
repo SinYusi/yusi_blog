@@ -1,9 +1,9 @@
 import "server-only";
 
-import { desc } from "drizzle-orm";
+import { asc, desc, eq, isNotNull } from "drizzle-orm";
 
 import { getDb } from "@/db";
-import { posts } from "@/db/schema";
+import { posts, series, tags } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/admin";
 
 /*
@@ -76,4 +76,92 @@ export async function getAdminPosts({
   );
 
   return { items, counts };
+}
+
+export type AdminPostDetail = {
+  id: number;
+  slug: string;
+  title: string;
+  summary: string;
+  /** 에디터 원본. 에디터가 생기기 전에 HTML로만 넣은 글(시드 등)은 null입니다. */
+  content: unknown;
+  status: "draft" | "published" | "scheduled";
+  state: AdminPostState;
+  publishedAt: Date | null;
+  updatedAt: Date;
+  seriesId: number | null;
+  seriesOrder: number | null;
+  tags: string[];
+};
+
+/** 편집 화면용 글 하나. 없으면 null입니다. */
+export async function getAdminPost(id: number): Promise<AdminPostDetail | null> {
+  await requireAdmin();
+
+  const post = await getDb().query.posts.findFirst({
+    where: eq(posts.id, id),
+    columns: {
+      id: true,
+      slug: true,
+      title: true,
+      summary: true,
+      content: true,
+      status: true,
+      publishedAt: true,
+      updatedAt: true,
+      seriesId: true,
+      seriesOrder: true,
+    },
+    with: { postTags: { with: { tag: { columns: { name: true } } } } },
+  });
+  if (!post) return null;
+
+  const { postTags: links, ...rest } = post;
+  return {
+    ...rest,
+    state: toState(post.status, post.publishedAt, new Date()),
+    tags: links.map((link) => link.tag.name).sort((a, b) => a.localeCompare(b, "ko")),
+  };
+}
+
+export type SeriesOption = {
+  id: number;
+  name: string;
+  /** 이 시리즈에서 이미 쓰는 순번과 그 글 (순번 중복을 화면에서 미리 알리는 데 씀) */
+  orders: { order: number; postId: number; title: string }[];
+};
+
+export type PostFormOptions = { series: SeriesOption[]; tags: string[] };
+
+/** 글 편집 화면의 선택지: 시리즈(사용 중인 순번 포함)와 기존 태그 이름 */
+export async function getPostFormOptions(): Promise<PostFormOptions> {
+  await requireAdmin();
+
+  const db = getDb();
+  const [seriesRows, orderRows, tagRows] = await Promise.all([
+    db.select({ id: series.id, name: series.name }).from(series).orderBy(asc(series.name)),
+    db
+      .select({
+        seriesId: posts.seriesId,
+        order: posts.seriesOrder,
+        postId: posts.id,
+        title: posts.title,
+      })
+      .from(posts)
+      .where(isNotNull(posts.seriesId))
+      .orderBy(asc(posts.seriesOrder)),
+    db.select({ name: tags.name }).from(tags).orderBy(asc(tags.name)),
+  ]);
+
+  return {
+    series: seriesRows.map((item) => ({
+      ...item,
+      orders: orderRows.flatMap((row) =>
+        row.seriesId === item.id && row.order !== null
+          ? [{ order: row.order, postId: row.postId, title: row.title }]
+          : [],
+      ),
+    })),
+    tags: tagRows.map((row) => row.name).sort((a, b) => a.localeCompare(b, "ko")),
+  };
 }
