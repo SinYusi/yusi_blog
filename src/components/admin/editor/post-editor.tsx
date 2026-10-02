@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import { previewPost, type PreviewResult } from "@/app/admin/(panel)/posts/actions";
 import { createEditorExtensions } from "@/lib/editor/extensions";
+import { isAllowedLinkHref } from "@/lib/editor/link-policy";
 import { serializeEditorDoc } from "@/lib/editor/transport";
 
 import { EditorSkeleton } from "./editor-skeleton";
@@ -42,16 +43,18 @@ function ariaKeyShortcuts(keys: readonly string[]) {
 }
 
 // 툴바 버튼 id → 실행할 명령. 링크는 주소 입력 창을 여는 동작이라 Toolbar에서 따로 연결합니다.
-const COMMANDS: Record<Exclude<ToolId, "link">, (editor: Editor) => void> = {
-  paragraph: (editor) => editor.chain().focus().setParagraph().run(),
-  h2: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-  h3: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
-  bulletList: (editor) => editor.chain().focus().toggleBulletList().run(),
-  orderedList: (editor) => editor.chain().focus().toggleOrderedList().run(),
-  blockquote: (editor) => editor.chain().focus().toggleBlockquote().run(),
-  bold: (editor) => editor.chain().focus().toggleBold().run(),
-  italic: (editor) => editor.chain().focus().toggleItalic().run(),
-  code: (editor) => editor.chain().focus().toggleCode().run(),
+// 명령은 에디터의 현재 선택 영역에 적용됩니다. 에디터로 초점을 옮길지는 호출하는 쪽(포인터/키보드)이 정합니다.
+type Chain = ReturnType<Editor["chain"]>;
+const COMMANDS: Record<Exclude<ToolId, "link">, (chain: Chain) => Chain> = {
+  paragraph: (chain) => chain.setParagraph(),
+  h2: (chain) => chain.toggleHeading({ level: 2 }),
+  h3: (chain) => chain.toggleHeading({ level: 3 }),
+  bulletList: (chain) => chain.toggleBulletList(),
+  orderedList: (chain) => chain.toggleOrderedList(),
+  blockquote: (chain) => chain.toggleBlockquote(),
+  bold: (chain) => chain.toggleBold(),
+  italic: (chain) => chain.toggleItalic(),
+  code: (chain) => chain.toggleCode(),
 };
 
 function selectActive({ editor }: { editor: Editor }): Record<ToolId, boolean> {
@@ -133,10 +136,16 @@ function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
             // 초점이 버튼에 남아, 이어서 입력한 글자가 방금 만든 블록이 아닌 곳에 들어갑니다.
             // 키보드(Tab으로 툴바 진입 → 화살표·Enter)는 mousedown이 없으므로 영향이 없습니다.
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
+            onClick={(event) => {
               setFocusIndex(index);
-              if (tool.id === "link") onLink();
-              else COMMANDS[tool.id](editor);
+              if (tool.id === "link") {
+                onLink();
+                return;
+              }
+              // 키보드(Enter·Space)로 누른 클릭은 detail이 0입니다. 이때는 초점을 버튼에 그대로 두어
+              // 화살표로 다음 버튼을 계속 고를 수 있게 하고, 포인터로 누르면 에디터로 초점을 돌려 바로 이어 쓰게 합니다.
+              const chain = event.detail === 0 ? editor.chain() : editor.chain().focus();
+              COMMANDS[tool.id](chain).run();
             }}
             className={`${toolButtonClass} ${tool.className ?? ""}`}
           >
@@ -193,8 +202,9 @@ function LinkForm({
       return;
     }
 
-    // 두 적용 경로 모두 문서를 바꾸기 전에 Link 확장의 주소 검사(setLink)를 먼저 통과해야 합니다.
-    if (!editor.can().setLink({ href: value })) {
+    // 두 적용 경로 모두 문서를 바꾸기 전에 허용 정책(link-policy.ts, Link 확장과 같은 규칙)을 먼저 통과해야 합니다.
+    // javascript:, data: 같은 주소를 그대로 적용하면 렌더링 때 href가 지워져, 알리지 않고 깨진 링크가 됩니다.
+    if (!isAllowedLinkHref(value) || !editor.can().setLink({ href: value })) {
       setError("쓸 수 없는 주소입니다. http(s), mailto, 상대 경로, #앵커를 쓸 수 있습니다.");
       inputRef.current?.focus();
       return;

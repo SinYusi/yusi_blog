@@ -1,6 +1,8 @@
 import type { Extensions } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 
+import { isAllowedLinkHref } from "./link-policy";
+
 /*
  * 에디터 확장 구성. 관리자 에디터(클라이언트)와 content_html 생성(서버, lib/content/editor-html.ts)이
  * 같은 구성을 써야 에디터가 만든 문서(JSON)를 서버가 같은 스키마로 해석합니다. 확장을 바꾸면 두 쪽이 함께 바뀝니다.
@@ -27,6 +29,9 @@ export function createEditorExtensions(): Extensions {
         autolink: true,
         linkOnPaste: true,
         defaultProtocol: "https",
+        // 직접 입력·붙여넣기·자동 링크와 HTML 생성(renderHTML) 모두 같은 허용 정책(link-policy.ts)을 따릅니다.
+        // 허용되지 않은 주소는 setLink가 실패하고, 렌더링 때는 href가 비워집니다.
+        isAllowedUri: (url) => isAllowedLinkHref(url),
         // 본문 링크는 같은 창에서 엽니다. target·rel은 정화 단계(render.ts)에서도 지워지므로 처음부터 넣지 않습니다.
         HTMLAttributes: { target: null, rel: null },
       },
