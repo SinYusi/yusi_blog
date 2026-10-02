@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { signOut } from "@/auth";
 import { NavLink } from "@/components/layout/nav-link";
@@ -43,9 +44,20 @@ export function AdminSidebar() {
 
       <nav aria-label="관리자 메뉴" className="flex flex-col gap-1">
         {ADMIN_NAV.map((item) => (
-          <NavLink key={item.href} href={item.href} className={itemClass}>
-            {item.label}
-          </NavLink>
+          // NavLink는 usePathname으로 현재 위치를 표시합니다. /admin/posts/[id]처럼 경로 값을 빌드 때 알 수 없는 페이지에서는
+          // 사전 렌더링 중 값을 읽을 수 없어 멈추므로(Cache Components), 그동안은 현재 위치 표시 없는 링크를 그립니다.
+          <Suspense
+            key={item.href}
+            fallback={
+              <Link href={item.href} className={itemClass}>
+                {item.label}
+              </Link>
+            }
+          >
+            <NavLink href={item.href} className={itemClass}>
+              {item.label}
+            </NavLink>
+          </Suspense>
         ))}
       </nav>
 
