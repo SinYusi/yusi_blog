@@ -11,8 +11,9 @@ import { renderPostHtml, type TocItem } from "./render";
 /*
  * 공개 페이지용 조회 함수. 모두 'use cache'로 캐시되어 빌드 시 정적 셸에 포함됩니다.
  * - 태그 CONTENT_CACHE_TAG: 관리자 화면에서 글을 저장·삭제하면 서버 액션이 updateTag로 바로 무효화합니다.
- * - cacheLife('hours'): 예약 글은 이 수명에 맡겨, 발행 시각 뒤 한 시간쯤 안에 들어온 요청부터 공개됩니다(ADR-0013).
- *   ponytail: 예약 공개는 최대 한 시간쯤 늦음, 정시가 필요하면 다음 예약 시각까지로 cacheLife를 줄임 (ADR-0013)
+ * - cacheLife('hours'): 예약 글은 이 수명에 맡깁니다. 수명(1시간)이 지난 뒤 첫 요청은 이전 결과를 받으면서 재생성을
+ *   시작하고, 그다음 요청부터 예약 글이 보입니다. 방문이 없으면 그만큼 늦어집니다(ADR-0013).
+ *   ponytail: 예약 공개는 요청 기반이라 정시 보장 없음, 정시가 필요하면 다음 예약 시각까지로 cacheLife를 줄임
  */
 export const CONTENT_CACHE_TAG = "posts";
 export const POSTS_PAGE_SIZE = 10;

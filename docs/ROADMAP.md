@@ -34,7 +34,7 @@
 - [x] Auth.js GitHub OAuth, `/admin` 라우트 보호 (JWT 세션, 허용 계정 1개, 미리보기 배포는 404, ADR-0009)
 - [x] Tiptap 에디터 기본 구성 (JSON 원본 + 서버에서 만드는 공개용 HTML, 소제목 id 규칙, 관리자 경로에서만 로드, ADR-0011)
 - [x] 글 작성, 수정, 삭제, 발행 상태 관리 (초안·발행·예약, 필드별 오류, slug 변경 시 이전 주소 308 이동(ADR-0012), 글의 태그·시리즈 연결을 바꾸면 `updated_at`도 갱신해 sitemap·RSS·JSON-LD의 수정 시각에 반영. 태그 이름 변경은 태그 관리 화면을 만들 때 같은 규칙으로 관련 글을 갱신)
-- [x] 발행 시 on-demand revalidation (저장·삭제 시 updateTag, 예약 글은 한 시간 안 공개, ADR-0013)
+- [x] 발행 시 on-demand revalidation (저장·삭제 시 updateTag, 예약 글은 캐시 수명에 따라 요청 기반 공개, ADR-0013)
 - [ ] 이미지 업로드 (저장소 결정 포함)
 - [ ] 자동 저장
 - [ ] 에디터 확장: 슬래시 커맨드, 코드 블록, 콜아웃

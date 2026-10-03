@@ -19,8 +19,7 @@ import { renderPostHtml, type TocItem } from "@/lib/content/render";
  * 관리자 글 서버 액션. 서버 액션은 화면 밖에서 직접 호출할 수 있으므로 모두 먼저 관리자인지 확인하고,
  * 화면이 보낸 값(FormData, bind한 글 id)은 하나도 믿지 않고 다시 검사합니다.
  *
- * 공개 페이지 캐시 갱신(revalidateTag)은 #39에서 더합니다. 그 전까지 공개 페이지는 cacheLife('hours')에 따라
- * 대략 한 시간 안에 바뀐 내용을 보여 줍니다(lib/content/posts.ts).
+ * 저장·삭제가 성공하면 updateTag로 공개 페이지 캐시를 바로 무효화합니다(ADR-0013).
  */
 
 export type PreviewResult =
