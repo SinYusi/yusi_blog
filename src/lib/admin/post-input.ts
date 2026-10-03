@@ -4,6 +4,7 @@
  * DB를 봐야 하는 검사(slug 중복, 시리즈 존재·순번 중복)는 lib/admin/post-mutations.ts가 트랜잭션 안에서 합니다.
  */
 
+// 글자 수 제한은 브라우저 maxLength와 같은 UTF-16 단위(String.length)로 셉니다. 이모지 하나는 2자입니다.
 export const TITLE_MAX = 200;
 export const SUMMARY_MAX = 300;
 export const SLUG_MAX = 80;
@@ -84,11 +85,6 @@ function text(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
-/** 글자 수는 코드 포인트 기준으로 셉니다 (이모지 하나를 두 글자로 세지 않음). */
-function length(value: string) {
-  return Array.from(value).length;
-}
-
 /** 태그 이름 정리: 앞뒤 공백과 앞의 #을 지우고, 연속 공백을 하나로 줄입니다. */
 export function normalizeTagName(value: string) {
   return value.normalize("NFC").trim().replace(/^#+/, "").trim().replace(/\s+/g, " ");
@@ -146,7 +142,7 @@ export function validatePostInput(raw: RawPostForm, now: Date): ValidationResult
 
   const title = text(raw.title).trim();
   if (!title) errors.title = "제목을 입력하세요.";
-  else if (length(title) > TITLE_MAX) errors.title = `제목은 ${TITLE_MAX}자 이하로 입력하세요.`;
+  else if (title.length > TITLE_MAX) errors.title = `제목은 ${TITLE_MAX}자 이하로 입력하세요.`;
 
   const slug = text(raw.slug).trim();
   if (!slug) errors.slug = "주소(slug)를 입력하세요.";
@@ -159,14 +155,14 @@ export function validatePostInput(raw: RawPostForm, now: Date): ValidationResult
   }
 
   const summary = text(raw.summary).trim();
-  if (length(summary) > SUMMARY_MAX) errors.summary = `요약은 ${SUMMARY_MAX}자 이하로 입력하세요.`;
+  if (summary.length > SUMMARY_MAX) errors.summary = `요약은 ${SUMMARY_MAX}자 이하로 입력하세요.`;
 
   const tags: string[] = [];
   const seenTags = new Set<string>();
   for (const value of raw.tags) {
     const name = normalizeTagName(text(value));
     if (!name) continue;
-    if (length(name) > TAG_NAME_MAX) {
+    if (name.length > TAG_NAME_MAX) {
       errors.tags = `태그 이름은 ${TAG_NAME_MAX}자 이하로 입력하세요: ${name}`;
       break;
     }

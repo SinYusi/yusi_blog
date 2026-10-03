@@ -50,6 +50,9 @@ describe("validatePostInput", () => {
 
   it("제목이 비었거나 길면 거부한다", () => {
     assert.ok(errorsOf({ title: "   " }).title);
+    // 브라우저 maxLength와 같은 UTF-16 기준: 이모지 100개 = 200자는 통과, 101개는 초과
+    assert.equal(errorsOf({ title: "😀".repeat(100) }).title, undefined);
+    assert.ok(errorsOf({ title: "😀".repeat(101) }).title);
     assert.ok(errorsOf({ title: "가".repeat(201) }).title);
     assert.equal(errorsOf({ title: "가".repeat(200) }).title, undefined);
   });
