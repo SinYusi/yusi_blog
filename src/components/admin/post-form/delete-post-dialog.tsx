@@ -69,7 +69,7 @@ export function DeletePostDialog({
             <p>
               태그 연결과 이전 주소 리다이렉트도 함께 지워집니다. 태그와 시리즈 자체는 남고, 이 글이
               쓰던 시리즈 순번은 비게 됩니다.
-              {isPublic && " 공개 페이지에서는 캐시가 갱신될 때(최대 한 시간쯤) 사라집니다."}
+              {isPublic && " 공개 페이지에서도 바로 사라집니다."}
             </p>
           </div>
           {state.status === "error" && (

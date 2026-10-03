@@ -510,8 +510,7 @@ export function PostForm({
               ? publicSlug
                 ? `공개 중입니다. 발행일(${publishedAtLabel})은 그대로 유지합니다.`
                 : "저장하면 바로 공개합니다. 지금이 발행일이 됩니다."
-              : "정한 시각(한국 시간)이 되면 공개합니다."}{" "}
-          공개 페이지에는 최대 한 시간쯤 늦게 반영될 수 있습니다.
+              : "정한 시각(한국 시간)이 지나고 공개 페이지가 다시 만들어질 때 공개됩니다. 한 시간 넘게 늦을 수 있습니다."}
         </p>
         <FieldError field="publishMode" errors={errors} />
 
