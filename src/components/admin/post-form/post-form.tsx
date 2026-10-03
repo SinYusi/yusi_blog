@@ -16,6 +16,7 @@ import {
   SLUG_PATTERN_HTML,
   SUMMARY_MAX,
   TITLE_MAX,
+  normalizeTagName,
   validatePostInput,
   type FieldErrors,
   type PostField,
@@ -207,6 +208,14 @@ export function PostForm({
       });
       return;
     }
+
+    // 함께 저장하는 입력 중 태그를 칩으로 옮깁니다. 남겨 두면 다음 저장에서 빠져 연결이 지워집니다.
+    const draftName = normalizeTagName(tagDraft);
+    if (draftName && !tags.some((tag) => tag.toLowerCase() === draftName.toLowerCase())) {
+      const existing = options.tags.find((tag) => tag.toLowerCase() === draftName.toLowerCase());
+      setTags([...tags, existing ?? draftName]);
+    }
+    setTagDraft("");
 
     setLocalState(null);
     setCreatedNotice(false);
