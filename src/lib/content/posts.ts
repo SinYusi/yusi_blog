@@ -10,10 +10,9 @@ import { renderPostHtml, type TocItem } from "./render";
 
 /*
  * 공개 페이지용 조회 함수. 모두 'use cache'로 캐시되어 빌드 시 정적 셸에 포함됩니다.
- * - 태그 CONTENT_CACHE_TAG: 2단계 CMS에서 글을 발행·수정하면 revalidateTag로 다시 생성합니다.
- * - cacheLife('hours'): 한 시간이 지난 뒤 들어온 요청이 백그라운드 재생성을 시작합니다. 그래서 예약 글은 발행 시각
- *   이후 대략 한 시간 안팎에 보이지만 정확한 시각은 보장하지 않습니다. 정시 공개가 필요해지면 2단계 CMS에서
- *   발행 시각에 revalidateTag(CONTENT_CACHE_TAG)를 호출합니다.
+ * - 태그 CONTENT_CACHE_TAG: 관리자 화면에서 글을 저장·삭제하면 서버 액션이 updateTag로 바로 무효화합니다.
+ * - cacheLife('hours'): 예약 글은 이 수명에 맡겨, 발행 시각 뒤 한 시간쯤 안에 들어온 요청부터 공개됩니다(ADR-0013).
+ *   ponytail: 예약 공개는 최대 한 시간쯤 늦음, 정시가 필요하면 다음 예약 시각까지로 cacheLife를 줄임 (ADR-0013)
  */
 export const CONTENT_CACHE_TAG = "posts";
 export const POSTS_PAGE_SIZE = 10;

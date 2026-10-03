@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 
 import { readPostForm, validatePostInput, type FieldErrors } from "@/lib/admin/post-input";
@@ -12,6 +12,7 @@ import {
   parseEditorJsonString,
   prepareEditorContent,
 } from "@/lib/content/editor-html";
+import { CONTENT_CACHE_TAG } from "@/lib/content/posts";
 import { renderPostHtml, type TocItem } from "@/lib/content/render";
 
 /*
@@ -117,6 +118,9 @@ async function save(id: number | null, formData: FormData): Promise<SaveOutcome>
     }
     return { state: invalid(result.errors) };
   }
+  // 공개 조회는 모두 CONTENT_CACHE_TAG를 달고 있어, 목록·상세·sitemap·RSS와 이전 slug의 캐시가 함께 무효화됩니다.
+  // updateTag는 다음 요청이 새 데이터를 기다리게 해(오래된 화면 없이) 저장 직후 공개 페이지에 반영됩니다.
+  updateTag(CONTENT_CACHE_TAG);
   if (id === null) return { createdId: result.id };
 
   return {
@@ -176,5 +180,6 @@ export async function deletePostAction(
   }
   if (!deleted)
     return { status: "error", message: "글을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다." };
+  updateTag(CONTENT_CACHE_TAG);
   redirect("/admin?deleted=1");
 }
