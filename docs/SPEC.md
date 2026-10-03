@@ -1,6 +1,6 @@
 # 프로젝트 스펙
 
-> 최종 수정: 2026-09-26
+> 최종 수정: 2026-10-02
 
 ## 1. 개요
 
@@ -89,6 +89,20 @@ DB 제약으로 지키는 규칙:
 - 글이 남아 있는 시리즈는 삭제할 수 없다.
 - 조회수·좋아요는 0 이상이다.
 
+**2단계 (추가)**
+
+```
+post_slug_redirects  old_slug(PK), post_id → posts(연쇄 삭제), created_at
+tags                 unique(lower(name)) 추가: 대소문자만 다른 태그 이름 금지
+```
+
+- 글의 slug를 바꾸면 이전 slug를 그 글 몫으로 남기고, 글이 공개 중이면 이전 주소를 새 주소로 영구 이동(308)한다 ([ADR-0012](adr/0012-post-slug-and-redirects.md)).
+
+관리자 저장 규칙 (`src/lib/admin/post-input.ts`, `post-mutations.ts`):
+
+- 발행 설정은 초안(`draft`, 발행 시각 없음) / 발행(`published`, 이미 공개된 글은 처음 발행 시각 유지, 아니면 저장 시각) / 예약(`scheduled`, 입력한 한국 시간, 지금보다 뒤)이다. 발행·예약하려면 본문이 있어야 한다.
+- 바뀐 것이 없으면 저장하지 않는다. 태그·시리즈 연결만 바뀌어도 `updated_at`을 갱신한다.
+
 **2단계 (예정)**
 
 ```
@@ -112,12 +126,12 @@ src/
     layout/         머리글, 바닥글, 메뉴, 404
     posts/          글 목록 컴포넌트
     post/           글 상세 컴포넌트 (목차, 코드 복사, 시리즈)
-    admin/          관리자 컴포넌트 (editor/: Tiptap 에디터, 관리자 글 작성 페이지에서만 import)
+    admin/          관리자 컴포넌트 (editor/: Tiptap 에디터, post-form/: 글 작성·수정 폼과 삭제 확인. 관리자 글 편집 페이지에서만 import)
   db/               Drizzle 스키마, 연결, 시드 데이터
   lib/
     content/        공개 글 조회('use cache'), 본문 렌더링, 에디터 JSON → 본문 HTML 변환
     editor/         에디터 확장 구성 (관리자 에디터와 서버 HTML 변환이 공유, ADR-0011)
-    admin/          관리자 데이터 조회 (requireAdmin 확인)
+    admin/          관리자 데이터 조회·저장 (requireAdmin 확인), 글 입력 검증
     auth/           관리자 확인 (requireAdmin)
 scripts/            마이그레이션, 시드, DB 확인, 색 대비 검사
 drizzle/            SQL 마이그레이션

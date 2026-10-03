@@ -16,7 +16,8 @@
     "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.mts",
     "db:studio": "drizzle-kit studio",
     "db:check": "tsx --env-file-if-exists=.env.local scripts/db-check.mts",
-    "db:seed": "tsx --env-file-if-exists=.env.local scripts/seed.mts"
+    "db:seed": "tsx --env-file-if-exists=.env.local scripts/seed.mts",
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

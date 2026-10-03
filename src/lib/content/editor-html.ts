@@ -146,7 +146,42 @@ export function parseEditorJsonString(input: unknown): unknown {
 
 /** 에디터 JSON → 공개용 본문 HTML. 형식이 잘못되면 InvalidEditorContentError를 던집니다. */
 export function editorJsonToHtml(json: unknown) {
+  return renderDocToHtml(parseEditorDoc(json));
+}
+
+/**
+ * 저장용 본문. 스키마로 검사한 문서를 다시 JSON으로 바꿔(doc.toJSON) 저장하므로, 클라이언트가 덧붙인
+ * 스키마 밖의 키는 posts.content에 남지 않습니다. content_html은 이 문서로 만듭니다.
+ * 형식이 잘못되면 InvalidEditorContentError를 던집니다.
+ */
+export function prepareEditorContent(json: unknown): {
+  json: unknown;
+  html: string;
+  empty: boolean;
+} {
   const doc = parseEditorDoc(json);
+  return { json: doc.toJSON(), html: renderDocToHtml(doc), empty: !hasContent(doc) };
+}
+
+/**
+ * 문서에 실제 내용이 있는지. 빈 줄에서 목록·인용만 켜면 HTML에는 `<ul><li></li></ul>`처럼 태그만 남으므로,
+ * HTML 문자열이 아니라 문서에서 공백이 아닌 글자나 줄바꿈 외의 인라인 노드(예: 이미지)가 있는지 봅니다.
+ */
+function hasContent(doc: ProseMirrorNode) {
+  let found = false;
+  doc.descendants((node) => {
+    if (found) return false;
+    if (
+      node.isText ? (node.text ?? "").trim() !== "" : node.isLeaf && node.type.name !== "hardBreak"
+    ) {
+      found = true;
+    }
+    return !found;
+  });
+  return found;
+}
+
+function renderDocToHtml(doc: ProseMirrorNode) {
   const headingIds = assignHeadingIds(doc);
 
   return renderToHTMLString({
