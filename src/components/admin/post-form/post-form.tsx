@@ -17,7 +17,6 @@ import {
   SUMMARY_MAX,
   TITLE_MAX,
   normalizeTagName,
-  parseKstDateTimeLocal,
   validatePostInput,
   type FieldErrors,
   type PostField,
@@ -200,9 +199,12 @@ export function PostForm({
       formData.set("content", serializeEditorDoc(editor.getJSON()));
     }
 
-    const savedScheduledAt =
-      initial.publishMode === "schedule" ? parseKstDateTimeLocal(initial.scheduledAt) : null;
-    const checked = validatePostInput(readPostForm(formData), new Date(), savedScheduledAt);
+    // 기존 글의 지난 예약 시각 검사는 서버가 잠근 행과 비교합니다(저장 뒤 폼 상태와 서버 값이 달라도 맞게 판단).
+    const checked = validatePostInput(
+      readPostForm(formData),
+      new Date(),
+      postId === null ? null : "defer",
+    );
     if (!checked.ok) {
       setLocalState({
         status: "error",
