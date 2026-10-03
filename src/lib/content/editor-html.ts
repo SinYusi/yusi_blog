@@ -155,7 +155,7 @@ function parseEditorDoc(json: unknown) {
       node.descendants((child) => {
         if ((CALLOUT_FORBIDDEN_NODES as readonly string[]).includes(child.type.name)) {
           throw new InvalidEditorContentError(
-            "콜아웃 안에는 코드 블록이나 콜아웃을 넣을 수 없습니다.",
+            "콜아웃 안에는 소제목, 코드 블록, 콜아웃을 넣을 수 없습니다.",
           );
         }
       });

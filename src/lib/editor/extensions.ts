@@ -21,10 +21,10 @@ export const CALLOUT_TYPES = ["info", "warning", "danger"] as const;
 export type CalloutType = (typeof CALLOUT_TYPES)[number];
 
 /**
- * 콜아웃 안에 둘 수 없는 블록. 콜아웃의 직접 자식은 content 규칙으로 막지만, 목록 항목은 임의의 블록을 품을 수 있어
+ * 콜아웃 안에 둘 수 없는 블록(소제목은 공개 목차에 섞임). 콜아웃의 직접 자식은 content 규칙으로 막지만, 목록 항목은 임의의 블록을 품을 수 있어
  * 목록을 거쳐 들어오는 경우는 슬래시 메뉴(slash-menu.tsx)와 서버 검사(editor-html.ts)가 이 목록으로 막습니다.
  */
-export const CALLOUT_FORBIDDEN_NODES = ["codeBlock", "callout"] as const;
+export const CALLOUT_FORBIDDEN_NODES = ["heading", "codeBlock", "callout"] as const;
 
 /** 코드 블록 파일명 최대 길이. 에디터 입력칸과 서버 검사(editor-html.ts)가 같은 값을 씁니다. */
 export const CODE_FILENAME_MAX = 100;

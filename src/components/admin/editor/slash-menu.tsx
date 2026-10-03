@@ -26,8 +26,20 @@ type SlashItem = {
 };
 
 const ITEMS: SlashItem[] = [
-  { id: "h2", label: "소제목 2", keywords: "h2 heading", run: (c) => c.setHeading({ level: 2 }) },
-  { id: "h3", label: "소제목 3", keywords: "h3 heading", run: (c) => c.setHeading({ level: 3 }) },
+  {
+    id: "h2",
+    label: "소제목 2",
+    keywords: "h2 heading",
+    run: (c) => c.setHeading({ level: 2 }),
+    node: "heading",
+  },
+  {
+    id: "h3",
+    label: "소제목 3",
+    keywords: "h3 heading",
+    run: (c) => c.setHeading({ level: 3 }),
+    node: "heading",
+  },
   {
     id: "bullet",
     label: "글머리 목록",
