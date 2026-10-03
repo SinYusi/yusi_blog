@@ -5,7 +5,7 @@ import { useEditorState } from "@tiptap/react";
 import { useEffect, useState, type RefObject } from "react";
 
 import { LOG_LANGUAGE } from "@/lib/content/code-languages";
-import { CALLOUT_FORBIDDEN_NODES, CALLOUT_TYPES } from "@/lib/editor/extensions";
+import { CALLOUT_ALLOWED_BLOCKS, CALLOUT_TYPES } from "@/lib/editor/extensions";
 
 import { CALLOUT_LABELS } from "./node-views";
 
@@ -22,7 +22,7 @@ type SlashItem = {
   keywords: string;
   run: (chain: Chain) => Chain;
   /** 만드는 블록 종류. 콜아웃 안(목록 속 포함)에서 쓸 수 없는 블록을 거르는 데 씁니다. */
-  node?: string;
+  node: string;
 };
 
 const ITEMS: SlashItem[] = [
@@ -45,14 +45,22 @@ const ITEMS: SlashItem[] = [
     label: "글머리 목록",
     keywords: "ul bullet list",
     run: (c) => c.toggleBulletList(),
+    node: "bulletList",
   },
   {
     id: "ordered",
     label: "번호 목록",
     keywords: "ol ordered list",
     run: (c) => c.toggleOrderedList(),
+    node: "orderedList",
   },
-  { id: "quote", label: "인용", keywords: "quote blockquote", run: (c) => c.setBlockquote() },
+  {
+    id: "quote",
+    label: "인용",
+    keywords: "quote blockquote",
+    run: (c) => c.setBlockquote(),
+    node: "blockquote",
+  },
   {
     id: "code",
     label: "코드 블록",
@@ -127,12 +135,10 @@ export function SlashMenu({
       ? ITEMS.filter(
           (item) =>
             matches(item, slash.query) &&
-            // 콜아웃 안의 목록 항목은 스키마상 어떤 블록이든 받으므로 여기서 따로 막습니다.
-            !(
-              slash.inCallout &&
-              (CALLOUT_FORBIDDEN_NODES as readonly (string | undefined)[]).includes(item.node)
-            ) &&
-            // 들어갈 수 없는 자리는 뺍니다(예: 콜아웃 안에는 코드 블록·소제목을 넣지 않음).
+            // 콜아웃 안에서는 허용 목록 밖의 블록을 뺍니다. 에디터도 그런 변경은 적용하지 않지만(extensions.ts),
+            // can()은 그 검사를 거치지 않으므로 메뉴에서 미리 거릅니다.
+            !(slash.inCallout && !CALLOUT_ALLOWED_BLOCKS.includes(item.node)) &&
+            // 그 밖에 스키마상 들어갈 수 없는 자리도 뺍니다.
             item.run(editor.can().chain().deleteRange({ from: slash.from, to: slash.to })).run(),
         )
       : [];
@@ -178,6 +184,20 @@ export function SlashMenu({
       dom.removeAttribute("aria-autocomplete");
     };
   }, [editor, activeId]);
+
+  // 메뉴가 열려 있는 동안만 본문을 펼쳐진 combobox로 알립니다(aria-expanded는 textbox 역할에 쓸 수 없음). 닫히면 원래 역할로 돌립니다.
+  useEffect(() => {
+    const dom = editor.view.dom;
+    if (!open) return;
+    const previousRole = dom.getAttribute("role");
+    dom.setAttribute("role", "combobox");
+    dom.setAttribute("aria-expanded", "true");
+    return () => {
+      if (previousRole === null) dom.removeAttribute("role");
+      else dom.setAttribute("role", previousRole);
+      dom.removeAttribute("aria-expanded");
+    };
+  }, [editor, open]);
 
   if (!open) return null;
 

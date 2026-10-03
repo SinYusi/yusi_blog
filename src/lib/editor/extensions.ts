@@ -1,5 +1,7 @@
 import { Node, type Extensions, type NodeViewRenderer } from "@tiptap/core";
 import { CodeBlock } from "@tiptap/extension-code-block";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { Plugin } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 
 import { isAllowedLinkHref } from "./link-policy";
@@ -21,10 +23,32 @@ export const CALLOUT_TYPES = ["info", "warning", "danger"] as const;
 export type CalloutType = (typeof CALLOUT_TYPES)[number];
 
 /**
- * 콜아웃 안에 둘 수 없는 블록(소제목은 공개 목차에 섞임). 콜아웃의 직접 자식은 content 규칙으로 막지만, 목록 항목은 임의의 블록을 품을 수 있어
- * 목록을 거쳐 들어오는 경우는 슬래시 메뉴(slash-menu.tsx)와 서버 검사(editor-html.ts)가 이 목록으로 막습니다.
+ * 콜아웃 안(목록 속 포함)에 둘 수 있는 블록. 콜아웃의 직접 자식은 content 규칙으로 제한되지만, 목록 항목은 첫 문단 뒤에
+ * 어떤 블록이든 받으므로 스키마만으로는 콜아웃 > 목록 > 소제목·인용·코드 블록을 막지 못합니다.
+ * 그래서 허용 목록으로 문서 전체를 검사합니다: 에디터는 이를 어기는 변경(툴바, 붙여넣기, 슬래시 메뉴 등 모든 경로)을
+ * 적용하지 않고, 서버(editor-html.ts)는 저장을 거부합니다. 공개 스타일이 문단·목록만 전제하고, 소제목은 목차에 섞이기 때문입니다.
  */
-export const CALLOUT_FORBIDDEN_NODES = ["heading", "codeBlock", "callout"] as const;
+export const CALLOUT_ALLOWED_BLOCKS: readonly string[] = [
+  "paragraph",
+  "bulletList",
+  "orderedList",
+  "listItem",
+];
+
+/** 콜아웃 안에 허용하지 않는 블록이 있으면 true. */
+export function hasInvalidCalloutContent(doc: ProseMirrorNode) {
+  let invalid = false;
+  doc.descendants((node) => {
+    if (invalid) return false;
+    if (node.type.name !== "callout") return true;
+    node.descendants((child) => {
+      if (child.isBlock && !CALLOUT_ALLOWED_BLOCKS.includes(child.type.name)) invalid = true;
+      return !invalid;
+    });
+    return false;
+  });
+  return invalid;
+}
 
 /** 코드 블록 파일명 최대 길이. 에디터 입력칸과 서버 검사(editor-html.ts)가 같은 값을 씁니다. */
 export const CODE_FILENAME_MAX = 100;
@@ -85,8 +109,7 @@ export function createEditorExtensions(nodeViews: EditorNodeViews = {}): Extensi
     Node.create({
       name: "callout",
       group: "block",
-      // 공개 스타일은 문단·목록을 전제로 합니다. 소제목은 목차에 섞이고, 코드 블록·콜아웃 중첩은 모양이 깨지므로 넣지 않습니다.
-      // 목록 안으로 들어오는 중첩은 CALLOUT_FORBIDDEN_NODES로 따로 막습니다.
+      // 공개 스타일은 문단·목록을 전제로 합니다. 목록 안으로 들어오는 블록은 CALLOUT_ALLOWED_BLOCKS로 따로 막습니다.
       content: "(paragraph | bulletList | orderedList)+",
       defining: true,
       addAttributes() {
@@ -108,6 +131,14 @@ export function createEditorExtensions(nodeViews: EditorNodeViews = {}): Extensi
         return ["aside", HTMLAttributes, 0];
       },
       addNodeView: nodeViews.callout && (() => nodeViews.callout!),
+      addProseMirrorPlugins() {
+        return [
+          new Plugin({
+            // ponytail: 문서가 바뀔 때마다 전체를 훑습니다(글 한 편 크기면 충분). 느려지면 바뀐 범위의 콜아웃만 검사.
+            filterTransaction: (tr) => !tr.docChanged || !hasInvalidCalloutContent(tr.doc),
+          }),
+        ];
+      },
     }),
   ];
 }

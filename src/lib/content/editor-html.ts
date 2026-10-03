@@ -9,10 +9,10 @@ import {
 } from "@tiptap/static-renderer/pm/html-string";
 
 import {
-  CALLOUT_FORBIDDEN_NODES,
   CODE_FILENAME_MAX,
   createEditorExtensions,
   HEADING_LEVELS,
+  hasInvalidCalloutContent,
   isCalloutType,
 } from "@/lib/editor/extensions";
 import { MAX_EDITOR_JSON_BYTES } from "@/lib/editor/transport";
@@ -151,16 +151,12 @@ function parseEditorDoc(json: unknown) {
       if (!isCalloutType(node.attrs.type)) {
         throw new InvalidEditorContentError(`지원하지 않는 콜아웃 종류입니다: ${node.attrs.type}`);
       }
-      // 목록 항목을 거치면 스키마(content 규칙)로는 막히지 않습니다.
-      node.descendants((child) => {
-        if ((CALLOUT_FORBIDDEN_NODES as readonly string[]).includes(child.type.name)) {
-          throw new InvalidEditorContentError(
-            "콜아웃 안에는 소제목, 코드 블록, 콜아웃을 넣을 수 없습니다.",
-          );
-        }
-      });
     }
   });
+  // 목록 항목을 거치면 스키마(content 규칙)로는 막히지 않아 허용 목록으로 따로 검사합니다(extensions.ts).
+  if (hasInvalidCalloutContent(doc)) {
+    throw new InvalidEditorContentError("콜아웃 안에는 문단과 목록만 넣을 수 있습니다.");
+  }
   return doc;
 }
 
