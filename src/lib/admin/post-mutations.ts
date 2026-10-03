@@ -7,6 +7,7 @@ import { posts, postSlugRedirects, postTags, series, tags } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/admin";
 
 import {
+  PAST_SCHEDULE_ERROR,
   resolvePublication,
   stableStringify,
   tagSlugFromName,
@@ -211,6 +212,17 @@ export async function savePost({
 
       await checkConflicts(tx, input, id);
 
+      // 지난 예약 시각은 저장된(잠근 행의) 예약 시각을 바꾸지 않은 경우에만 허용합니다.
+      const savedScheduledAt = existing?.status === "scheduled" ? existing.publishedAt : null;
+      if (
+        input.publishMode === "schedule" &&
+        input.scheduledAt &&
+        input.scheduledAt <= now &&
+        !sameTime(input.scheduledAt, savedScheduledAt)
+      ) {
+        throw new FieldValidationError({ scheduledAt: PAST_SCHEDULE_ERROR });
+      }
+
       const { status, publishedAt } = resolvePublication(
         input.publishMode,
         input.scheduledAt,
@@ -320,14 +332,4 @@ export async function deletePostById(id: number) {
     .where(eq(posts.id, id))
     .returning({ id: posts.id, slug: posts.slug });
   return deleted ?? null;
-}
-
-/** 저장된 예약 시각 (예약 상태가 아니면 null). 검증에서 "바꾸지 않은 지난 예약 시각"을 허용할 때 씁니다. */
-export async function getSavedScheduledAt(id: number) {
-  await requireAdmin();
-  const [row] = await getDb()
-    .select({ publishedAt: posts.publishedAt })
-    .from(posts)
-    .where(and(eq(posts.id, id), eq(posts.status, "scheduled")));
-  return row?.publishedAt ?? null;
 }

@@ -135,6 +135,8 @@ describe("validatePostInput", () => {
     assert.ok(validatePostInput(keep, NOW, saved).ok);
     const changed = raw({ publishMode: "schedule", scheduledAt: "2026-10-02T11:30" });
     assert.equal(validatePostInput(changed, NOW, saved).ok, false);
+    // 서버는 잠근 행과 비교하려고 이 검사를 savePost로 미룹니다.
+    assert.ok(validatePostInput(changed, NOW, "defer").ok);
     assert.ok(errorsOf({ publishMode: "schedule", scheduledAt: "" }).scheduledAt);
     assert.ok(errorsOf({ publishMode: "schedule", scheduledAt: "내일" }).scheduledAt);
   });
