@@ -137,7 +137,15 @@ function parsePositiveInt(value: string, max: number) {
 }
 
 /** 저장 전 형식 검사. 시각 비교는 인자로 받은 now를 기준으로 합니다(테스트에서 고정). */
-export function validatePostInput(raw: RawPostForm, now: Date): ValidationResult {
+/**
+ * savedScheduledAt: 이미 저장된 예약 시각. 편집 화면을 열어 둔 사이 그 시각이 지나도, 시각을 바꾸지 않았다면
+ * 다른 수정은 저장되게 합니다(그 시점에 글은 이미 공개 상태입니다).
+ */
+export function validatePostInput(
+  raw: RawPostForm,
+  now: Date,
+  savedScheduledAt: Date | null = null,
+): ValidationResult {
   const errors: FieldErrors = {};
 
   const title = text(raw.title).trim();
@@ -201,7 +209,7 @@ export function validatePostInput(raw: RawPostForm, now: Date): ValidationResult
     scheduledAt = value ? parseKstDateTimeLocal(value) : null;
     if (!value) errors.scheduledAt = "발행 시각을 입력하세요.";
     else if (!scheduledAt) errors.scheduledAt = "발행 시각 형식이 올바르지 않습니다.";
-    else if (scheduledAt <= now) {
+    else if (scheduledAt <= now && scheduledAt.getTime() !== savedScheduledAt?.getTime()) {
       errors.scheduledAt =
         "예약 발행 시각은 지금보다 뒤여야 합니다. 바로 공개하려면 '발행'을 고르세요.";
     }

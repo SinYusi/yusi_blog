@@ -4,7 +4,12 @@ import { refresh } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 
 import { readPostForm, validatePostInput, type FieldErrors } from "@/lib/admin/post-input";
-import { deletePostById, savePost, type PostContent } from "@/lib/admin/post-mutations";
+import {
+  deletePostById,
+  getSavedScheduledAt,
+  savePost,
+  type PostContent,
+} from "@/lib/admin/post-mutations";
 import { requireAdmin } from "@/lib/auth/admin";
 import {
   editorJsonToHtml,
@@ -75,7 +80,8 @@ type SaveOutcome = { state: PostFormState } | { createdId: number };
 
 async function save(id: number | null, formData: FormData): Promise<SaveOutcome> {
   const now = new Date();
-  const parsed = validatePostInput(readPostForm(formData), now);
+  const saved = id === null ? null : await getSavedScheduledAt(id);
+  const parsed = validatePostInput(readPostForm(formData), now, saved);
   const errors: FieldErrors = parsed.ok ? {} : { ...parsed.errors };
 
   // 본문은 serializeEditorDoc으로 만든 JSON 문자열입니다(lib/editor/transport.ts). 서버가 스키마로 검사하고 HTML을 다시 만듭니다.

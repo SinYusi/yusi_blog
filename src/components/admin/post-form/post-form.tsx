@@ -17,6 +17,7 @@ import {
   SUMMARY_MAX,
   TITLE_MAX,
   normalizeTagName,
+  parseKstDateTimeLocal,
   validatePostInput,
   type FieldErrors,
   type PostField,
@@ -199,7 +200,9 @@ export function PostForm({
       formData.set("content", serializeEditorDoc(editor.getJSON()));
     }
 
-    const checked = validatePostInput(readPostForm(formData), new Date());
+    const savedScheduledAt =
+      initial.publishMode === "schedule" ? parseKstDateTimeLocal(initial.scheduledAt) : null;
+    const checked = validatePostInput(readPostForm(formData), new Date(), savedScheduledAt);
     if (!checked.ok) {
       setLocalState({
         status: "error",

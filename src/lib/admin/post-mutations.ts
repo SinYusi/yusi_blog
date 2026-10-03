@@ -321,3 +321,13 @@ export async function deletePostById(id: number) {
     .returning({ id: posts.id, slug: posts.slug });
   return deleted ?? null;
 }
+
+/** 저장된 예약 시각 (예약 상태가 아니면 null). 검증에서 "바꾸지 않은 지난 예약 시각"을 허용할 때 씁니다. */
+export async function getSavedScheduledAt(id: number) {
+  await requireAdmin();
+  const [row] = await getDb()
+    .select({ publishedAt: posts.publishedAt })
+    .from(posts)
+    .where(and(eq(posts.id, id), eq(posts.status, "scheduled")));
+  return row?.publishedAt ?? null;
+}

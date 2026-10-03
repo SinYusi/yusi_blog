@@ -129,6 +129,12 @@ describe("validatePostInput", () => {
     assert.equal(result.value.scheduledAt?.toISOString(), "2026-10-02T03:01:00.000Z");
 
     assert.ok(errorsOf({ publishMode: "schedule", scheduledAt: "2026-10-02T12:00" }).scheduledAt);
+    // 저장된 예약 시각을 바꾸지 않았다면 그 시각이 지났어도 다른 수정은 저장됩니다.
+    const saved = new Date("2026-10-02T02:00:00Z"); // 한국 시간 11:00, NOW보다 과거
+    const keep = raw({ publishMode: "schedule", scheduledAt: "2026-10-02T11:00" });
+    assert.ok(validatePostInput(keep, NOW, saved).ok);
+    const changed = raw({ publishMode: "schedule", scheduledAt: "2026-10-02T11:30" });
+    assert.equal(validatePostInput(changed, NOW, saved).ok, false);
     assert.ok(errorsOf({ publishMode: "schedule", scheduledAt: "" }).scheduledAt);
     assert.ok(errorsOf({ publishMode: "schedule", scheduledAt: "내일" }).scheduledAt);
   });
