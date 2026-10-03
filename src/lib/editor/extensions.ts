@@ -20,6 +20,12 @@ export type HeadingLevel = (typeof HEADING_LEVELS)[number];
 export const CALLOUT_TYPES = ["info", "warning", "danger"] as const;
 export type CalloutType = (typeof CALLOUT_TYPES)[number];
 
+/**
+ * 콜아웃 안에 둘 수 없는 블록. 콜아웃의 직접 자식은 content 규칙으로 막지만, 목록 항목은 임의의 블록을 품을 수 있어
+ * 목록을 거쳐 들어오는 경우는 슬래시 메뉴(slash-menu.tsx)와 서버 검사(editor-html.ts)가 이 목록으로 막습니다.
+ */
+export const CALLOUT_FORBIDDEN_NODES = ["codeBlock", "callout"] as const;
+
 /** 코드 블록 파일명 최대 길이. 에디터 입력칸과 서버 검사(editor-html.ts)가 같은 값을 씁니다. */
 export const CODE_FILENAME_MAX = 100;
 
@@ -80,6 +86,7 @@ export function createEditorExtensions(nodeViews: EditorNodeViews = {}): Extensi
       name: "callout",
       group: "block",
       // 공개 스타일은 문단·목록을 전제로 합니다. 소제목은 목차에 섞이고, 코드 블록·콜아웃 중첩은 모양이 깨지므로 넣지 않습니다.
+      // 목록 안으로 들어오는 중첩은 CALLOUT_FORBIDDEN_NODES로 따로 막습니다.
       content: "(paragraph | bulletList | orderedList)+",
       defining: true,
       addAttributes() {

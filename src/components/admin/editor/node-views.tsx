@@ -43,7 +43,9 @@ export function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
           autoComplete="off"
           maxLength={CODE_FILENAME_MAX}
           value={node.attrs.filename ?? ""}
-          onChange={(event) => updateAttributes({ filename: event.target.value || null })}
+          onChange={(event) =>
+            updateAttributes({ filename: event.target.value.trim() ? event.target.value : null })
+          }
           // 에디터는 글 저장 폼 안에 있어, Enter가 폼 제출(저장·발행)로 이어지지 않게 막습니다.
           onKeyDown={(event) => {
             if (event.key === "Enter") event.preventDefault();

@@ -9,6 +9,7 @@ import {
 } from "@tiptap/static-renderer/pm/html-string";
 
 import {
+  CALLOUT_FORBIDDEN_NODES,
   CODE_FILENAME_MAX,
   createEditorExtensions,
   HEADING_LEVELS,
@@ -146,8 +147,18 @@ function parseEditorDoc(json: unknown) {
         );
       }
     }
-    if (node.type.name === "callout" && !isCalloutType(node.attrs.type)) {
-      throw new InvalidEditorContentError(`지원하지 않는 콜아웃 종류입니다: ${node.attrs.type}`);
+    if (node.type.name === "callout") {
+      if (!isCalloutType(node.attrs.type)) {
+        throw new InvalidEditorContentError(`지원하지 않는 콜아웃 종류입니다: ${node.attrs.type}`);
+      }
+      // 목록 항목을 거치면 스키마(content 규칙)로는 막히지 않습니다.
+      node.descendants((child) => {
+        if ((CALLOUT_FORBIDDEN_NODES as readonly string[]).includes(child.type.name)) {
+          throw new InvalidEditorContentError(
+            "콜아웃 안에는 코드 블록이나 콜아웃을 넣을 수 없습니다.",
+          );
+        }
+      });
     }
   });
   return doc;
@@ -229,7 +240,8 @@ function renderDocToHtml(doc: ProseMirrorNode) {
           if (isBlank(node)) return "";
           const attrs = serializeAttrsToHTMLString({
             "data-language": node.attrs.language || null,
-            "data-filename": node.attrs.filename || null,
+            // 공백뿐인 파일명은 없는 것으로 봅니다(공개 머리글이 비지 않도록 언어 이름을 보여 줌).
+            "data-filename": node.attrs.filename?.trim() || null,
           });
           return `<pre${attrs}><code>${serializeChildrenToHTMLString(children)}</code></pre>`;
         },

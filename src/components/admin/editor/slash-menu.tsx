@@ -5,7 +5,7 @@ import { useEditorState } from "@tiptap/react";
 import { useEffect, useState, type RefObject } from "react";
 
 import { LOG_LANGUAGE } from "@/lib/content/code-languages";
-import { CALLOUT_TYPES } from "@/lib/editor/extensions";
+import { CALLOUT_FORBIDDEN_NODES, CALLOUT_TYPES } from "@/lib/editor/extensions";
 
 import { CALLOUT_LABELS } from "./node-views";
 
@@ -16,7 +16,14 @@ import { CALLOUT_LABELS } from "./node-views";
  */
 
 type Chain = ReturnType<Editor["chain"]>;
-type SlashItem = { id: string; label: string; keywords: string; run: (chain: Chain) => Chain };
+type SlashItem = {
+  id: string;
+  label: string;
+  keywords: string;
+  run: (chain: Chain) => Chain;
+  /** 만드는 블록 종류. 콜아웃 안(목록 속 포함)에서 쓸 수 없는 블록을 거르는 데 씁니다. */
+  node?: string;
+};
 
 const ITEMS: SlashItem[] = [
   { id: "h2", label: "소제목 2", keywords: "h2 heading", run: (c) => c.setHeading({ level: 2 }) },
@@ -34,12 +41,19 @@ const ITEMS: SlashItem[] = [
     run: (c) => c.toggleOrderedList(),
   },
   { id: "quote", label: "인용", keywords: "quote blockquote", run: (c) => c.setBlockquote() },
-  { id: "code", label: "코드 블록", keywords: "code pre", run: (c) => c.setCodeBlock() },
+  {
+    id: "code",
+    label: "코드 블록",
+    keywords: "code pre",
+    run: (c) => c.setCodeBlock(),
+    node: "codeBlock",
+  },
   {
     id: "log",
     label: "로그",
     keywords: "log output terminal",
     run: (c) => c.setCodeBlock({ language: LOG_LANGUAGE }),
+    node: "codeBlock",
   },
   ...CALLOUT_TYPES.map((type) => ({
     id: `callout-${type}`,
@@ -47,6 +61,7 @@ const ITEMS: SlashItem[] = [
     keywords: `${type} callout`,
     // toggleWrap은 같은 종류의 콜아웃 안에서 쓰면 콜아웃을 풀어 버리므로, 감싸기만 하는 wrapIn을 씁니다.
     run: (c: Chain) => c.wrapIn("callout", { type }),
+    node: "callout",
   })),
 ];
 
@@ -70,7 +85,10 @@ function selectSlash({ editor }: { editor: Editor }) {
     from: $from.start(),
     to: $from.pos,
     query: text.slice(1),
-    top: caret.bottom - box.top + 4,
+    inCallout: Array.from({ length: $from.depth }, (_, d) => $from.node(d + 1)).some(
+      (node) => node.type.name === "callout",
+    ),
+    top: caret.bottom - box.top,
     left: caret.left - box.left,
   };
 }
@@ -97,6 +115,11 @@ export function SlashMenu({
       ? ITEMS.filter(
           (item) =>
             matches(item, slash.query) &&
+            // 콜아웃 안의 목록 항목은 스키마상 어떤 블록이든 받으므로 여기서 따로 막습니다.
+            !(
+              slash.inCallout &&
+              (CALLOUT_FORBIDDEN_NODES as readonly (string | undefined)[]).includes(item.node)
+            ) &&
             // 들어갈 수 없는 자리는 뺍니다(예: 콜아웃 안에는 코드 블록·소제목을 넣지 않음).
             item.run(editor.can().chain().deleteRange({ from: slash.from, to: slash.to })).run(),
         )
@@ -153,7 +176,7 @@ export function SlashMenu({
       aria-label="블록 넣기"
       // 본문 입력 영역과 같은 기준(relative 상자)에 놓습니다. 상자 테두리(1px)만큼의 차이는 무시합니다.
       style={{ top: slash.top, left: slash.left }}
-      className="absolute z-20 flex max-h-80 w-64 flex-col overflow-y-auto rounded-xl border border-border-strong bg-bg p-1"
+      className="absolute z-20 mt-1 flex max-h-80 w-64 flex-col overflow-y-auto rounded-xl border border-border-strong bg-bg p-1"
     >
       {items.map((item, position) => (
         <li
