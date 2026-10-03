@@ -8,7 +8,12 @@ import {
   serializeChildrenToHTMLString,
 } from "@tiptap/static-renderer/pm/html-string";
 
-import { createEditorExtensions, HEADING_LEVELS } from "@/lib/editor/extensions";
+import {
+  CODE_FILENAME_MAX,
+  createEditorExtensions,
+  HEADING_LEVELS,
+  isCalloutType,
+} from "@/lib/editor/extensions";
 import { MAX_EDITOR_JSON_BYTES } from "@/lib/editor/transport";
 
 /*
@@ -31,6 +36,8 @@ export class InvalidEditorContentError extends Error {
 }
 
 const MAX_ID_LENGTH = 80;
+// 언어 이름(typescript 등)보다 넉넉하게. 지원 목록 밖의 값도 저장은 하고, 공개 페이지에서 text로 보입니다.
+const MAX_LANGUAGE_LENGTH = 40;
 const FALLBACK_ID = "section";
 // tsconfig target(ES2017)에서는 정규식 리터럴의 u 플래그를 쓸 수 없어 생성자로 만듭니다.
 const NON_ID_CHARS = new RegExp("[^\\p{L}\\p{M}\\p{N}\\s_-]", "gu");
@@ -122,6 +129,26 @@ function parseEditorDoc(json: unknown) {
     ) {
       throw new InvalidEditorContentError(`지원하지 않는 소제목 단계입니다: ${node.attrs.level}`);
     }
+    if (node.type.name === "codeBlock") {
+      const { language, filename } = node.attrs;
+      if (
+        language !== null &&
+        (typeof language !== "string" || language.length > MAX_LANGUAGE_LENGTH)
+      ) {
+        throw new InvalidEditorContentError("코드 블록 언어는 짧은 문자열이어야 합니다.");
+      }
+      if (
+        filename !== null &&
+        (typeof filename !== "string" || filename.length > CODE_FILENAME_MAX)
+      ) {
+        throw new InvalidEditorContentError(
+          `코드 블록 파일명은 ${CODE_FILENAME_MAX}자 이하의 문자열이어야 합니다.`,
+        );
+      }
+    }
+    if (node.type.name === "callout" && !isCalloutType(node.attrs.type)) {
+      throw new InvalidEditorContentError(`지원하지 않는 콜아웃 종류입니다: ${node.attrs.type}`);
+    }
   });
   return doc;
 }
@@ -196,6 +223,20 @@ function renderDocToHtml(doc: ProseMirrorNode) {
           const tag = `h${node.attrs.level}`;
           const attrs = serializeAttrsToHTMLString({ id: headingIds.get(node) });
           return `<${tag}${attrs}>${serializeChildrenToHTMLString(children)}</${tag}>`;
+        },
+        // 빈 코드 블록·콜아웃도 공개 페이지에 빈 상자로 남지 않게 출력하지 않습니다.
+        codeBlock: ({ node, children }) => {
+          if (isBlank(node)) return "";
+          const attrs = serializeAttrsToHTMLString({
+            "data-language": node.attrs.language || null,
+            "data-filename": node.attrs.filename || null,
+          });
+          return `<pre${attrs}><code>${serializeChildrenToHTMLString(children)}</code></pre>`;
+        },
+        callout: ({ node, children }) => {
+          if (!node.textContent.trim()) return "";
+          const attrs = serializeAttrsToHTMLString({ "data-callout": node.attrs.type });
+          return `<aside${attrs}>${serializeChildrenToHTMLString(children)}</aside>`;
         },
       },
     },

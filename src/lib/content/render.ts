@@ -5,9 +5,11 @@ import { toString } from "hast-util-to-string";
 import rehypeParse from "rehype-parse";
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
-import { createHighlighter, type BundledLanguage } from "shiki";
+import { createHighlighter } from "shiki";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
+
+import { LOG_LANGUAGE, resolveLanguage, SUPPORTED_LANGUAGES } from "./code-languages";
 
 /*
  * 저장된 본문 HTML(content_html)을 공개 페이지용 HTML로 바꿉니다. 빌드 시 'use cache' 안에서 한 번 실행되므로
@@ -20,30 +22,6 @@ import { visit } from "unist-util-visit";
  */
 
 export type TocItem = { id: string; text: string };
-
-const SUPPORTED_LANGUAGES = [
-  "typescript",
-  "tsx",
-  "javascript",
-  "jsx",
-  "json",
-  "bash",
-  "yaml",
-  "python",
-  "css",
-  "html",
-  "sql",
-  "diff",
-  "markdown",
-] as const satisfies BundledLanguage[];
-
-const LANGUAGE_ALIASES: Record<string, string> = {
-  ts: "typescript",
-  js: "javascript",
-  sh: "bash",
-  yml: "yaml",
-  md: "markdown",
-};
 
 /*
  * GitHub 라이트 테마의 주석 색(#6e7781)은 흰 배경 기준이라, 코드 배경 토큰(--code #eef2f8) 위에서 4.05:1로
@@ -90,14 +68,6 @@ const h = (
 });
 const text = (value: string): ElementContent => ({ type: "text", value });
 
-function resolveLanguage(value: unknown) {
-  const raw = String(value ?? "").toLowerCase();
-  const name = LANGUAGE_ALIASES[raw] ?? raw;
-  return (SUPPORTED_LANGUAGES as readonly string[]).includes(name)
-    ? (name as BundledLanguage)
-    : null;
-}
-
 function rehypeCodeBlocks(highlighter: Awaited<ReturnType<typeof createHighlighter>>) {
   return (tree: Root) => {
     visit(tree, "element", (node, index, parent) => {
@@ -107,7 +77,7 @@ function rehypeCodeBlocks(highlighter: Awaited<ReturnType<typeof createHighlight
       const filename = node.properties.dataFilename ? String(node.properties.dataFilename) : null;
       const code = toString(node).replace(/\n$/, "");
       const lang = resolveLanguage(rawLanguage);
-      const isLog = String(rawLanguage) === "log";
+      const isLog = String(rawLanguage) === LOG_LANGUAGE;
 
       const pre = lang
         ? (highlighter.codeToHast(code, {
