@@ -179,6 +179,8 @@ export function PostForm({
   const [autoState, setAutoState] = useState<AutosaveState>({ status: "idle" });
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const runAutosaveRef = useRef<() => void>(() => {});
+  // 자동 저장이 띄운 입력 오류. 다음 자동 저장이 검사를 통과하면 이 오류는 지웁니다(직접 저장의 오류는 남김).
+  const autosaveErrorRef = useRef<PostFormState | null>(null);
   const conflict = state.status === "error" && state.conflict === true;
 
   // 방금 만든 글: 안내를 한 번 보여 주고, 새로 고침해도 다시 나오지 않게 주소에서 ?created=1을 지웁니다.
@@ -270,6 +272,13 @@ export function PostForm({
    * 자동 저장. 발행 설정은 바꾸지 않고 초안으로만 저장합니다(발행·예약은 저장 버튼으로만).
    * 쓰고 있는 태그 입력은 아직 확정하지 않은 값이라 넣지 않습니다. 오류는 초점을 옮기지 않고 상태 줄에만 알립니다.
    */
+  function showAutosaveError(error: PostFormState) {
+    announcedRef.current = error;
+    autosaveErrorRef.current = error;
+    setLocalState(error);
+    setAutoState({ status: "blocked" });
+  }
+
   async function runAutosave() {
     const form = formRef.current;
     if (!autosave || postId === null || conflict || !form) return;
@@ -290,10 +299,17 @@ export function PostForm({
     formData.set("publishMode", "draft");
     formData.set("slug", initial.slug);
     formData.delete("scheduledAt");
-    if (!validatePostInput(readPostForm(formData), new Date(), "defer").ok) {
-      setAutoState({ status: "blocked" });
+    const checked = validatePostInput(readPostForm(formData), new Date(), "defer");
+    if (!checked.ok) {
+      // 직접 저장처럼 칸마다 오류를 보여 주되, 입력하는 중이므로 오류 요약으로 초점을 옮기지는 않습니다(이미 알린 것으로 표시).
+      showAutosaveError({
+        status: "error",
+        message: `자동 저장하지 못했습니다. 아래 ${Object.keys(checked.errors).length}개 항목을 확인하세요.`,
+        fieldErrors: checked.errors,
+      });
       return;
     }
+    if (state === autosaveErrorRef.current) setLocalState(null);
 
     const version = changeVersionRef.current;
     setAutoState({ status: "saving" });
@@ -310,6 +326,7 @@ export function PostForm({
       // 모든 입력을 저장했으면 앞서 난 입력 오류 표시는 더 이상 맞지 않으므로 지웁니다.
       // 일부만 저장했으면 빠진 입력(예: 예약 시각)의 오류일 수 있어 남겨 둡니다.
       if (complete && state.status === "error") setLocalState({ status: "idle" });
+      autosaveErrorRef.current = null;
       setAutoState({
         status: "saved",
         message: complete
@@ -322,11 +339,8 @@ export function PostForm({
       setAutoState({ status: "idle" });
       setLocalState(result);
     } else if (result.status === "error" && Object.keys(result.fieldErrors).length > 0) {
-      // 서버에서만 알 수 있는 입력 오류(주소·시리즈 순번 중복 등)는 직접 저장과 같이 칸마다 보여 주되,
-      // 입력하는 중이므로 오류 요약으로 초점을 옮기지는 않습니다(이미 알린 것으로 표시).
-      announcedRef.current = result;
-      setLocalState(result);
-      setAutoState({ status: "blocked" });
+      // 서버에서만 알 수 있는 입력 오류(주소·시리즈 순번 중복 등)도 같은 방식으로 보여 줍니다.
+      showAutosaveError(result);
     } else {
       setAutoState({
         status: "failed",
