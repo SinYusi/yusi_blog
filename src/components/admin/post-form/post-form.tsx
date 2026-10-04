@@ -214,6 +214,13 @@ export function PostForm({
 
   useEffect(() => () => clearTimeout(autosaveTimerRef.current), []);
 
+  // 공개·예약 글을 초안으로 저장한 뒤 자동 저장이 켜지면, 그 저장 중에 고친 내용(자동 저장이 꺼져 있어 예약되지 않음)을 저장합니다.
+  useEffect(() => {
+    if (!autosave || !dirty) return;
+    clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => runAutosaveRef.current(), AUTOSAVE_DELAY_MS);
+  }, [autosave, dirty]);
+
   const markChanged = useCallback(() => {
     changeVersionRef.current += 1;
     setDirty(true);
