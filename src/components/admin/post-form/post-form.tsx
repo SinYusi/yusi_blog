@@ -269,14 +269,16 @@ export function PostForm({
    */
   async function runAutosave() {
     const form = formRef.current;
-    if (!autosave || postId === null || conflict || pending || !form) return;
-    if (autoState.status === "saving") {
-      // 저장하는 동안 생긴 변경은 이 저장이 끝난 뒤 다시 시도합니다.
+    if (!autosave || postId === null || conflict || !form) return;
+    if (pending || autoState.status === "saving") {
+      // 직접 저장이나 앞선 자동 저장이 진행 중이면, 그동안 생긴 변경은 그 저장이 끝난 뒤 다시 시도합니다.
       autosaveTimerRef.current = setTimeout(() => runAutosaveRef.current(), AUTOSAVE_DELAY_MS);
       return;
     }
     const formData = buildFormData(form, tags);
     if (!formData) return;
+    // 자동 저장에서 빼는 입력(초안이 아닌 발행 설정, 확정하지 않은 태그)이 있으면 저장 뒤에도 저장하지 않은 변경으로 남깁니다.
+    const complete = formData.get("publishMode") === "draft" && !normalizeTagName(tagDraft);
     formData.set("publishMode", "draft");
     formData.delete("scheduledAt");
     if (!validatePostInput(readPostForm(formData), new Date(), "defer").ok) {
@@ -295,8 +297,16 @@ export function PostForm({
     }
     if (result.status === "saved") {
       baseUpdatedAtRef.current = result.updatedAt;
-      if (changeVersionRef.current === version) setDirty(false);
-      setAutoState({ status: "saved", message: "자동 저장했습니다.", savedAt: result.savedAt });
+      if (changeVersionRef.current === version && complete) setDirty(false);
+      // 고친 뒤 자동 저장에 성공했으면 앞서 직접 저장에서 난 입력 오류 표시는 더 이상 맞지 않으므로 지웁니다.
+      if (state.status === "error") setLocalState({ status: "idle" });
+      setAutoState({
+        status: "saved",
+        message: complete
+          ? "자동 저장했습니다."
+          : "발행 설정과 입력 중인 태그를 뺀 내용을 자동 저장했습니다. 나머지는 저장 버튼으로 저장하세요.",
+        savedAt: result.savedAt,
+      });
     } else if (result.status === "error" && result.conflict) {
       // 덮어쓰지 않았음을 오류 요약으로 알리고, 이후 자동 저장을 멈춥니다.
       setAutoState({ status: "idle" });
