@@ -19,6 +19,7 @@
 | [0011](0011-editor-content-format.md)        | 에디터 본문 저장 형식과 HTML 생성                     | 승인 |
 | [0012](0012-post-slug-and-redirects.md)      | 글 주소(slug) 형식과 주소 변경 시 리다이렉트          | 승인 |
 | [0013](0013-publish-revalidation.md)         | 발행 반영: 저장 시 updateTag, 예약 글은 캐시 수명으로 | 승인 |
+| [0014](0014-autosave-and-concurrency.md)     | 자동 저장 범위(저장된 초안만)와 동시 편집 충돌 방지   | 제안 |
 
 ## 작성 방법
 

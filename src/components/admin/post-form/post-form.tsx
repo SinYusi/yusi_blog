@@ -1,7 +1,7 @@
 "use client";
 
 import type { Editor, JSONContent } from "@tiptap/core";
-import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useCallback, useEffect, useRef, useState } from "react";
 
 import {
   createPostAction,
@@ -35,7 +35,19 @@ import { TagInput } from "./tag-input";
  * - <form action>을 쓰면 React가 제출 뒤 폼을 초기화하므로, onSubmit에서 FormData를 만들어 액션을 부릅니다.
  *   그래서 저장에 실패해도 입력한 내용이 그대로 남습니다.
  * - 같은 검증 함수(validatePostInput)를 저장 전에 먼저 돌려 형식 오류는 서버에 가지 않고 바로 알립니다. 서버도 다시 검사합니다.
+ * - 자동 저장과 동시 편집 충돌 방지는 ADR-0014: 저장된 초안만 입력이 멈추면 자동 저장하고, 모든 저장은 불러온
+ *   updated_at(baseUpdatedAt)을 함께 보내 다른 탭이 먼저 저장했으면 서버가 덮어쓰지 않습니다.
  */
+
+/** 입력이 멈춘 뒤 자동 저장까지 기다리는 시간 */
+const AUTOSAVE_DELAY_MS = 2000;
+
+type AutosaveState =
+  | { status: "idle" }
+  | { status: "saving" }
+  | { status: "saved"; message: string; savedAt: string }
+  | { status: "blocked" }
+  | { status: "failed"; message: string };
 
 export type PostFormInitial = {
   title: string;
@@ -48,6 +60,8 @@ export type PostFormInitial = {
   /** datetime-local 값 (한국 시간). 예약이 아니면 빈 문자열 */
   scheduledAt: string;
   content: JSONContent | null;
+  /** 불러온 글의 updated_at (ISO). 저장할 때 비교 기준으로 보냅니다. 새 글이면 null */
+  updatedAt: string | null;
 };
 
 const FIELD_LABELS: Record<PostField, string> = {
@@ -116,6 +130,7 @@ export function PostForm({
   publicSlug,
   publishedAtLabel,
   justCreated,
+  autosave = false,
 }: {
   /** 수정할 글 id. 새 글이면 null */
   postId: number | null;
@@ -129,6 +144,8 @@ export function PostForm({
   publishedAtLabel: string | null;
   /** 방금 만든 글의 편집 화면이면 true (저장 완료 안내) */
   justCreated: boolean;
+  /** 입력이 멈추면 초안으로 자동 저장할지. 저장된 초안만 켭니다(ADR-0014). */
+  autosave?: boolean;
 }) {
   const action = postId === null ? createPostAction : updatePostAction.bind(null, postId);
   const [serverState, formAction, pending] = useActionState<PostFormState, FormData>(action, {
@@ -149,6 +166,19 @@ export function PostForm({
   const [scheduledAt, setScheduledAt] = useState(initial.scheduledAt);
   const [createdNotice, setCreatedNotice] = useState(justCreated);
   const summaryRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // 동시 편집 충돌 방지의 비교 기준. 저장할 때마다 서버가 돌려준 새 updated_at으로 바꿉니다.
+  const baseUpdatedAtRef = useRef(initial.updatedAt);
+  // 저장하지 않은 변경 추적: 변경할 때마다 버전을 올리고, 저장이 끝나면 저장을 시작한 시점의 버전을 저장된 버전으로 둡니다.
+  // 저장하는 동안 더 고쳤으면 두 버전이 달라 여전히 저장할 것이 남은 상태가 됩니다.
+  const changeVersionRef = useRef(0);
+  const submitVersionRef = useRef(0);
+  const [dirty, setDirty] = useState(false);
+  const [autoState, setAutoState] = useState<AutosaveState>({ status: "idle" });
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const runAutosaveRef = useRef<() => void>(() => {});
+  const conflict = state.status === "error" && state.conflict === true;
 
   // 방금 만든 글: 안내를 한 번 보여 주고, 새로 고침해도 다시 나오지 않게 주소에서 ?created=1을 지웁니다.
   useEffect(() => {
@@ -163,6 +193,40 @@ export function PostForm({
     announcedRef.current = state;
     summaryRef.current?.focus();
   }, [state]);
+
+  // 직접 저장(useActionState)이 끝나면 비교 기준과 저장된 버전을 갱신합니다.
+  useEffect(() => {
+    if (serverState.status !== "saved") return;
+    baseUpdatedAtRef.current = serverState.updatedAt;
+    if (changeVersionRef.current === submitVersionRef.current) setDirty(false);
+  }, [serverState]);
+
+  // 저장하지 않은 변경이 있으면 탭을 닫거나 새로 고칠 때 브라우저가 확인을 묻게 합니다.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  useEffect(() => () => clearTimeout(autosaveTimerRef.current), []);
+
+  const markChanged = useCallback(() => {
+    changeVersionRef.current += 1;
+    setDirty(true);
+    if (!autosave) return;
+    clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => runAutosaveRef.current(), AUTOSAVE_DELAY_MS);
+  }, [autosave]);
+
+  // 본문 변경은 에디터 이벤트로 받습니다(contenteditable은 폼의 onChange로 오지 않음).
+  useEffect(() => {
+    if (!editor) return;
+    editor.on("update", markChanged);
+    return () => {
+      editor.off("update", markChanged);
+    };
+  }, [editor, markChanged]);
 
   // 저장된 글의 주소를 바꾸는 중인지. 저장하면 refresh()로 initial.slug가 새 주소가 되어 안내가 사라집니다.
   const slugChanged = postId !== null && slug.trim() !== initial.slug;
@@ -187,17 +251,75 @@ export function PostForm({
     document.getElementById(id)?.focus();
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (pending) return;
-
-    const formData = new FormData(event.currentTarget);
-    // 아직 추가하지 않은 태그 입력도 함께 저장합니다.
-    for (const tag of [...tags, tagDraft]) formData.append("tags", tag);
+  /** 폼 값으로 저장 요청을 만듭니다. 에디터가 아직 없으면 null입니다. */
+  function buildFormData(form: HTMLFormElement, tagNames: string[]) {
+    const formData = new FormData(form);
+    for (const tag of tagNames) formData.append("tags", tag);
     if (!legacyBody) {
-      if (!editor) return;
+      if (!editor) return null;
       formData.set("content", serializeEditorDoc(editor.getJSON()));
     }
+    if (baseUpdatedAtRef.current) formData.set("baseUpdatedAt", baseUpdatedAtRef.current);
+    return formData;
+  }
+
+  /**
+   * 자동 저장. 발행 설정은 바꾸지 않고 초안으로만 저장합니다(발행·예약은 저장 버튼으로만).
+   * 쓰고 있는 태그 입력은 아직 확정하지 않은 값이라 넣지 않습니다. 오류는 초점을 옮기지 않고 상태 줄에만 알립니다.
+   */
+  async function runAutosave() {
+    const form = formRef.current;
+    if (!autosave || postId === null || conflict || pending || !form) return;
+    if (autoState.status === "saving") {
+      // 저장하는 동안 생긴 변경은 이 저장이 끝난 뒤 다시 시도합니다.
+      autosaveTimerRef.current = setTimeout(() => runAutosaveRef.current(), AUTOSAVE_DELAY_MS);
+      return;
+    }
+    const formData = buildFormData(form, tags);
+    if (!formData) return;
+    formData.set("publishMode", "draft");
+    formData.delete("scheduledAt");
+    if (!validatePostInput(readPostForm(formData), new Date(), "defer").ok) {
+      setAutoState({ status: "blocked" });
+      return;
+    }
+
+    const version = changeVersionRef.current;
+    setAutoState({ status: "saving" });
+    let result: PostFormState;
+    try {
+      result = await updatePostAction(postId, { status: "idle" }, formData);
+    } catch {
+      setAutoState({ status: "failed", message: "연결을 확인하세요." });
+      return;
+    }
+    if (result.status === "saved") {
+      baseUpdatedAtRef.current = result.updatedAt;
+      if (changeVersionRef.current === version) setDirty(false);
+      setAutoState({ status: "saved", message: "자동 저장했습니다.", savedAt: result.savedAt });
+    } else if (result.status === "error" && result.conflict) {
+      // 덮어쓰지 않았음을 오류 요약으로 알리고, 이후 자동 저장을 멈춥니다.
+      setAutoState({ status: "idle" });
+      setLocalState(result);
+    } else {
+      setAutoState({
+        status: "failed",
+        message: result.status === "error" ? result.message : "다시 시도하세요.",
+      });
+    }
+  }
+
+  useEffect(() => {
+    runAutosaveRef.current = runAutosave;
+  });
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending || autoState.status === "saving") return;
+
+    // 아직 추가하지 않은 태그 입력도 함께 저장합니다.
+    const formData = buildFormData(event.currentTarget, [...tags, tagDraft]);
+    if (!formData) return;
 
     // 기존 글의 지난 예약 시각 검사는 서버가 잠근 행과 비교합니다(저장 뒤 폼 상태와 서버 값이 달라도 맞게 판단).
     const checked = validatePostInput(
@@ -224,12 +346,42 @@ export function PostForm({
 
     setLocalState(null);
     setCreatedNotice(false);
+    clearTimeout(autosaveTimerRef.current);
+    submitVersionRef.current = changeVersionRef.current;
     startTransition(() => formAction(formData));
   }
 
   const errorEntries = FIELD_ORDER.flatMap((field) =>
     errors[field] ? [[field, errors[field]] as const] : [],
   );
+  // 직접 저장과 자동 저장 중 나중에 끝난 결과를 보여 줍니다.
+  const lastSaved = [
+    serverState.status === "saved" && serverState,
+    autoState.status === "saved" && autoState,
+  ]
+    .filter((item) => item !== false)
+    .sort((a, b) => a.savedAt.localeCompare(b.savedAt))
+    .at(-1);
+  const statusMessage = pending
+    ? "저장하는 중입니다."
+    : conflict
+      ? "다른 곳에서 먼저 저장해 저장을 멈췄습니다."
+      : autoState.status === "saving"
+        ? "자동 저장하는 중입니다."
+        : autoState.status === "failed"
+          ? `자동 저장하지 못했습니다. ${autoState.message}`
+          : autoState.status === "blocked"
+            ? "입력 오류가 있어 자동 저장하지 않았습니다. 고치면 다시 저장합니다."
+            : dirty && !autosave
+              ? "저장하지 않은 변경 사항이 있습니다."
+              : lastSaved
+                ? `${lastSaved.message} ${formatDateTime(new Date(lastSaved.savedAt))}`
+                : createdNotice
+                  ? "글을 만들었습니다. 이어서 고칠 수 있습니다."
+                  : autosave
+                    ? "초안은 입력을 멈추면 자동으로 저장합니다."
+                    : "";
+
   const submitLabel = pending
     ? "저장 중…"
     : publishMode === "draft"
@@ -242,8 +394,11 @@ export function PostForm({
 
   return (
     <form
+      ref={formRef}
       noValidate
       onSubmit={handleSubmit}
+      // 입력칸·선택·라디오의 변경을 한곳에서 받습니다. 본문과 태그 칩은 따로 알립니다.
+      onChange={markChanged}
       onKeyDown={(event) => {
         // 한 줄 입력칸에서 Enter를 눌러 실수로 발행되지 않게 합니다. 저장은 저장 버튼으로만 합니다.
         const target = event.target as HTMLElement;
@@ -372,7 +527,10 @@ export function PostForm({
         </label>
         <TagInput
           tags={tags}
-          onTagsChange={setTags}
+          onTagsChange={(next) => {
+            setTags(next);
+            markChanged();
+          }}
           draft={tagDraft}
           onDraftChange={setTagDraft}
           suggestions={options.tags}
@@ -538,20 +696,23 @@ export function PostForm({
       <div className="flex flex-col gap-3 border-t border-border pt-6 md:flex-row md:items-center">
         <button
           type="submit"
-          disabled={pending || (!legacyBody && !editor)}
+          disabled={pending || autoState.status === "saving" || (!legacyBody && !editor)}
           className={primaryButtonClass}
         >
           {submitLabel}
         </button>
         <p role="status" className="text-meta text-muted">
-          {pending
-            ? "저장하는 중입니다."
-            : state.status === "saved"
-              ? `${state.message} ${formatDateTime(new Date(state.savedAt))}`
-              : createdNotice
-                ? "글을 만들었습니다. 이어서 고칠 수 있습니다."
-                : ""}
+          {statusMessage}
         </p>
+        {autoState.status === "failed" && (
+          <button
+            type="button"
+            onClick={() => runAutosaveRef.current()}
+            className="inline-flex min-h-11 w-fit cursor-pointer items-center text-meta text-accent underline underline-offset-4 hover:text-accent-hover"
+          >
+            다시 시도
+          </button>
+        )}
       </div>
     </form>
   );
