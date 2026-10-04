@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "tags_name_lower_unique" ON "tags" USING btree (lower("name"));

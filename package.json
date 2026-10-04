@@ -16,13 +16,21 @@
     "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.mts",
     "db:studio": "drizzle-kit studio",
     "db:check": "tsx --env-file-if-exists=.env.local scripts/db-check.mts",
-    "db:seed": "tsx --env-file-if-exists=.env.local scripts/seed.mts"
+    "db:seed": "tsx --env-file-if-exists=.env.local scripts/seed.mts",
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
+    "@tiptap/core": "3.31.4",
+    "@tiptap/extension-code-block": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/react": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
+    "@tiptap/static-renderer": "3.31.4",
     "drizzle-orm": "^0.45.3",
     "hast-util-to-string": "^3.0.1",
     "next": "16.3.6",
+    "next-auth": "5.0.0-beta.32",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "rehype-parse": "^9.0.1",

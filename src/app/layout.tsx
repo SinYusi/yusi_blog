@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_KR, JetBrains_Mono } from "next/font/google";
 
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
 import { FEED_PATH, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { DEFAULT_THEME, themeInitScript } from "@/lib/theme";
 
@@ -54,11 +52,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           본문으로 건너뛰기
         </a>
-        <SiteHeader />
-        <main id="main" className="mx-auto flex w-full max-w-content flex-1 flex-col px-5 md:px-10">
-          {children}
-        </main>
-        <SiteFooter />
+        {/* 공개 사이트는 (site) 레이아웃이, 관리자는 admin 레이아웃이 머리글과 <main id="main">을 둡니다. */}
+        {children}
       </body>
     </html>
   );

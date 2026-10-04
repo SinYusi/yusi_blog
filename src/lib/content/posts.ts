@@ -4,16 +4,16 @@ import { and, asc, count, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { getDb } from "@/db";
-import { posts, postTags, series, tags } from "@/db/schema";
+import { posts, postSlugRedirects, postTags, series, tags } from "@/db/schema";
 
 import { renderPostHtml, type TocItem } from "./render";
 
 /*
  * 공개 페이지용 조회 함수. 모두 'use cache'로 캐시되어 빌드 시 정적 셸에 포함됩니다.
- * - 태그 CONTENT_CACHE_TAG: 2단계 CMS에서 글을 발행·수정하면 revalidateTag로 다시 생성합니다.
- * - cacheLife('hours'): 한 시간이 지난 뒤 들어온 요청이 백그라운드 재생성을 시작합니다. 그래서 예약 글은 발행 시각
- *   이후 대략 한 시간 안팎에 보이지만 정확한 시각은 보장하지 않습니다. 정시 공개가 필요해지면 2단계 CMS에서
- *   발행 시각에 revalidateTag(CONTENT_CACHE_TAG)를 호출합니다.
+ * - 태그 CONTENT_CACHE_TAG: 관리자 화면에서 글을 저장·삭제하면 서버 액션이 updateTag로 바로 무효화합니다.
+ * - cacheLife('hours'): 예약 글은 이 수명에 맡깁니다. 수명(1시간)이 지난 뒤 첫 요청은 이전 결과를 받으면서 재생성을
+ *   시작하고, 그다음 요청부터 예약 글이 보입니다. 방문이 없으면 그만큼 늦어집니다(ADR-0013).
+ *   ponytail: 예약 공개는 요청 기반이라 정시 보장 없음, 정시가 필요하면 다음 예약 시각까지로 cacheLife를 줄임
  */
 export const CONTENT_CACHE_TAG = "posts";
 export const POSTS_PAGE_SIZE = 10;
@@ -210,4 +210,27 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
     toc,
     series: seriesInfo,
   };
+}
+
+/**
+ * 이전 주소(바뀌기 전 slug) → 지금 slug (ADR-0012). 글 상세가 없는 slug일 때 영구 이동(308)할 곳을 찾습니다.
+ * 공개된 글로 가는 경우만 돌려주므로, 글이 초안으로 돌아가면 이전 주소도 404가 됩니다.
+ */
+export async function getRedirectedSlug(oldSlug: string): Promise<string | null> {
+  "use cache";
+  cacheTag(CONTENT_CACHE_TAG, `post:${oldSlug}`);
+
+  const [row] = await getDb()
+    .select({ slug: posts.slug })
+    .from(postSlugRedirects)
+    .innerJoin(posts, eq(posts.id, postSlugRedirects.postId))
+    .where(and(eq(postSlugRedirects.oldSlug, oldSlug), isPublic))
+    .limit(1);
+  // 없는 주소는 slug를 바꾼 직후 생길 수 있으므로 getPostBySlug의 null처럼 짧게 캐시합니다.
+  if (!row) {
+    cacheLife("minutes");
+    return null;
+  }
+  cacheLife("hours");
+  return row.slug;
 }

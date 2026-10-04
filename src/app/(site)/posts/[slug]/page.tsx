@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 import { CodeCopy } from "@/components/post/code-copy";
 import { SeriesNav } from "@/components/post/series-nav";
 import { TableOfContents } from "@/components/post/table-of-contents";
 import { TagList } from "@/components/posts/tag-list";
-import { getPostBySlug, getPublicPostSlugs, type PostDetail } from "@/lib/content/posts";
+import {
+  getPostBySlug,
+  getPublicPostSlugs,
+  getRedirectedSlug,
+  type PostDetail,
+} from "@/lib/content/posts";
 import { formatDate } from "@/lib/format";
 import { SITE_AUTHOR, SITE_NAME, absoluteUrl, pageMetadata, postPath } from "@/lib/site";
 
@@ -63,8 +68,14 @@ function PostJsonLd({ post }: { post: PostDetail }) {
 }
 
 export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
-  const post = await getPostBySlug((await params).slug);
-  if (!post) notFound();
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+  if (!post) {
+    // 발행된 글의 slug를 바꾸면 이전 주소로 들어온 방문자를 새 주소로 영구 이동(308)시킵니다 (ADR-0012).
+    const current = await getRedirectedSlug(slug);
+    if (current) permanentRedirect(postPath(current));
+    notFound();
+  }
 
   const hasToc = post.toc.length > 0;
 
