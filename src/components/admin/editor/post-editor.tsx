@@ -1,7 +1,7 @@
 "use client";
 
 import { Extension, type Editor, type JSONContent } from "@tiptap/core";
-import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
+import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { previewPost, type PreviewResult } from "@/app/admin/(panel)/posts/actions";
@@ -10,6 +10,8 @@ import { isAllowedLinkHref } from "@/lib/editor/link-policy";
 import { serializeEditorDoc } from "@/lib/editor/transport";
 
 import { EditorSkeleton } from "./editor-skeleton";
+import { CalloutView, CodeBlockView } from "./node-views";
+import { SlashMenu } from "./slash-menu";
 import {
   LINK_KEYS,
   separatorClass,
@@ -360,6 +362,7 @@ export function PostEditor({
   errorId?: string;
 } = {}) {
   const openLinkRef = useRef<() => void>(() => {});
+  const slashKeyRef = useRef<(key: string) => boolean>(() => false);
   const previewRequestRef = useRef(0);
   const [link, setLink] = useState<{ href: string } | null>(null);
   const [mode, setMode] = useState<"write" | "preview">("write");
@@ -370,7 +373,10 @@ export function PostEditor({
     // 서버 렌더링 결과와 어긋나지 않도록 에디터는 브라우저에서 마운트한 뒤에 만듭니다. 그 전에는 자리 표시를 그립니다.
     immediatelyRender: false,
     extensions: [
-      ...createEditorExtensions(),
+      ...createEditorExtensions({
+        codeBlock: ReactNodeViewRenderer(CodeBlockView),
+        callout: ReactNodeViewRenderer(CalloutView),
+      }),
       // 링크 단축키(Mod-k)는 Tiptap 기본값에 없어 직접 더합니다. 주소 입력 창을 엽니다.
       Extension.create({
         name: "linkShortcut",
@@ -380,6 +386,19 @@ export function PostEditor({
               openLinkRef.current();
               return true;
             },
+          };
+        },
+      }),
+      // 슬래시 메뉴가 열려 있을 때는 화살표·Enter·Esc를 메뉴가 먼저 받습니다(기본 Enter보다 앞서도록 우선순위를 높임).
+      Extension.create({
+        name: "slashMenuKeys",
+        priority: 1000,
+        addKeyboardShortcuts() {
+          return {
+            ArrowDown: () => slashKeyRef.current("ArrowDown"),
+            ArrowUp: () => slashKeyRef.current("ArrowUp"),
+            Enter: () => slashKeyRef.current("Enter"),
+            Escape: () => slashKeyRef.current("Escape"),
           };
         },
       }),
@@ -461,11 +480,12 @@ export function PostEditor({
       <div hidden={mode !== "write"} className="flex flex-col gap-3">
         <Toolbar editor={editor} onLink={openLinkForm} />
         {link && <LinkForm editor={editor} initialHref={link.href} onClose={() => setLink(null)} />}
-        <div className="rounded-xl border border-border-strong bg-surface focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-hover">
+        <div className="relative rounded-xl border border-border-strong bg-surface focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-hover">
           <EditorContent editor={editor} />
+          <SlashMenu editor={editor} keyRef={slashKeyRef} />
         </div>
         <p className="font-mono text-caption text-muted">
-          {`굵게 ${shortcutLabel(["B"])} · 기울임 ${shortcutLabel(["I"])} · 코드 ${shortcutLabel(["E"])} · 링크 ${shortcutLabel(LINK_KEYS)} · 줄바꿈 Shift+Enter`}
+          {`블록 넣기 / · 굵게 ${shortcutLabel(["B"])} · 기울임 ${shortcutLabel(["I"])} · 코드 ${shortcutLabel(["E"])} · 링크 ${shortcutLabel(LINK_KEYS)} · 줄바꿈 Shift+Enter`}
         </p>
       </div>
 
