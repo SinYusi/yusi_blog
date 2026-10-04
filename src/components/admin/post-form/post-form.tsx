@@ -357,6 +357,8 @@ export function PostForm({
     setLocalState(null);
     setCreatedNotice(false);
     clearTimeout(autosaveTimerRef.current);
+    // 직접 저장이 모든 입력을 저장하므로, 그전의 자동 저장 보류·실패 안내는 지우고 이 저장의 결과를 보여 줍니다.
+    setAutoState({ status: "idle" });
     submitVersionRef.current = changeVersionRef.current;
     startTransition(() => formAction(formData));
   }
