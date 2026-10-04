@@ -20,6 +20,7 @@ import { renderPostHtml, type TocItem } from "@/lib/content/render";
  * 화면이 보낸 값(FormData, bind한 글 id)은 하나도 믿지 않고 다시 검사합니다.
  *
  * 저장·삭제가 성공하면 updateTag로 공개 페이지 캐시를 바로 무효화합니다(ADR-0013).
+ * 수정은 화면이 불러온 updated_at(baseUpdatedAt)과 비교해, 다른 곳에서 먼저 저장했으면 덮어쓰지 않습니다(ADR-0014).
  */
 
 export type PreviewResult =
@@ -47,11 +48,14 @@ export async function previewPost(contentJson: unknown): Promise<PreviewResult> 
   return { ok: true, html, toc };
 }
 
-/** 글 저장 폼의 상태 (useActionState). 화면에 그릴 값만 담습니다. */
+/**
+ * 글 저장 폼의 상태 (useActionState). 화면에 그릴 값만 담습니다.
+ * saved의 updatedAt은 다음 저장의 비교 기준(baseUpdatedAt)이고, conflict는 다른 곳에서 먼저 저장해 쓰지 않은 경우입니다.
+ */
 export type PostFormState =
   | { status: "idle" }
-  | { status: "error"; message: string; fieldErrors: FieldErrors }
-  | { status: "saved"; message: string; savedAt: string };
+  | { status: "error"; message: string; fieldErrors: FieldErrors; conflict?: true }
+  | { status: "saved"; message: string; savedAt: string; updatedAt: string };
 
 function isPostId(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
@@ -96,9 +100,24 @@ async function save(id: number | null, formData: FormData): Promise<SaveOutcome>
 
   if (!parsed.ok || Object.keys(errors).length > 0) return { state: invalid(errors) };
 
+  let baseUpdatedAt: Date | null = null;
+  if (id !== null) {
+    const raw = formData.get("baseUpdatedAt");
+    baseUpdatedAt = typeof raw === "string" ? new Date(raw) : null;
+    if (!baseUpdatedAt || Number.isNaN(baseUpdatedAt.getTime())) {
+      return {
+        state: {
+          status: "error",
+          message: "글을 불러온 시각을 받지 못했습니다. 새로 고친 뒤 다시 저장하세요.",
+          fieldErrors: {},
+        },
+      };
+    }
+  }
+
   let result: Awaited<ReturnType<typeof savePost>>;
   try {
-    result = await savePost({ id, input: parsed.value, content, now });
+    result = await savePost({ id, input: parsed.value, content, baseUpdatedAt, now });
   } catch (error) {
     // 예상하지 못한 오류(DB 연결 등)도 오류 경계로 화면을 바꾸지 않고 폼에 알려, 입력한 내용을 잃지 않게 합니다.
     unstable_rethrow(error);
@@ -106,6 +125,17 @@ async function save(id: number | null, formData: FormData): Promise<SaveOutcome>
     return { state: UNEXPECTED_ERROR };
   }
   if (!result.ok) {
+    if ("conflict" in result) {
+      return {
+        state: {
+          status: "error",
+          message:
+            "다른 탭이나 창에서 이 글을 먼저 저장해, 덮어쓰지 않았습니다. 지금 쓴 내용을 복사해 둔 뒤 새로 고쳐 최신 내용을 불러오세요.",
+          fieldErrors: {},
+          conflict: true,
+        },
+      };
+    }
     if ("notFound" in result) {
       return {
         state: {
@@ -119,7 +149,8 @@ async function save(id: number | null, formData: FormData): Promise<SaveOutcome>
   }
   // 공개 조회는 모두 CONTENT_CACHE_TAG를 달고 있어, 목록·상세·sitemap·RSS와 이전 slug의 캐시가 함께 무효화됩니다.
   // updateTag는 다음 요청이 새 데이터를 기다리게 해(오래된 화면 없이) 저장 직후 공개 페이지에 반영됩니다.
-  updateTag(CONTENT_CACHE_TAG);
+  // 초안끼리의 저장(초안 자동 저장 포함)은 공개 결과가 같으므로 무효화하지 않습니다.
+  if (result.affectsPublic) updateTag(CONTENT_CACHE_TAG);
   if (id === null) return { createdId: result.id };
 
   return {
@@ -127,6 +158,7 @@ async function save(id: number | null, formData: FormData): Promise<SaveOutcome>
       status: "saved",
       message: result.changed ? "저장했습니다." : "바뀐 내용이 없어 저장하지 않았습니다.",
       savedAt: now.toISOString(),
+      updatedAt: result.updatedAt.toISOString(),
     },
   };
 }
