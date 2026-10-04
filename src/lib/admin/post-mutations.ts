@@ -25,7 +25,15 @@ import {
 export type PostContent = { json: unknown; html: string; empty: boolean } | null;
 
 export type SavePostResult =
-  | { ok: true; id: number; slug: string; changed: boolean; updatedAt: Date }
+  | {
+      ok: true;
+      id: number;
+      slug: string;
+      changed: boolean;
+      updatedAt: Date;
+      /** 저장 전후 모두 초안이면 false. 공개 페이지에 영향이 없어 캐시를 무효화하지 않아도 됩니다. */
+      affectsPublic: boolean;
+    }
   | { ok: false; errors: FieldErrors; message?: string }
   | { ok: false; notFound: true }
   | { ok: false; conflict: true };
@@ -241,6 +249,7 @@ export async function savePost({
         existing,
         now,
       );
+      const affectsPublic = !((existing?.status ?? "draft") === "draft" && status === "draft");
       const contentHtml = content ? content.html : (existing?.contentHtml ?? "");
       // 새 본문은 문서로 판단하고(빈 목록·인용만 있는 문서도 비었다고 봄), 기존 본문을 유지하면 저장된 HTML로 판단합니다.
       const bodyEmpty = content ? content.empty : !contentHtml.trim();
@@ -274,6 +283,7 @@ export async function savePost({
           slug: input.slug,
           changed: true,
           updatedAt: created.updatedAt,
+          affectsPublic,
         };
       }
 
@@ -302,6 +312,7 @@ export async function savePost({
           slug: existing.slug,
           changed: false,
           updatedAt: existing.updatedAt,
+          affectsPublic: false,
         };
       }
 
@@ -333,7 +344,14 @@ export async function savePost({
         await tx.delete(postSlugRedirects).where(eq(postSlugRedirects.oldSlug, input.slug));
       }
 
-      return { ok: true, id: existing.id, slug: input.slug, changed: true, updatedAt: now };
+      return {
+        ok: true,
+        id: existing.id,
+        slug: input.slug,
+        changed: true,
+        updatedAt: now,
+        affectsPublic,
+      };
     });
   } catch (error) {
     if (error instanceof FieldValidationError) return { ok: false, errors: error.errors };

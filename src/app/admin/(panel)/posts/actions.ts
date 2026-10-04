@@ -149,7 +149,8 @@ async function save(id: number | null, formData: FormData): Promise<SaveOutcome>
   }
   // 공개 조회는 모두 CONTENT_CACHE_TAG를 달고 있어, 목록·상세·sitemap·RSS와 이전 slug의 캐시가 함께 무효화됩니다.
   // updateTag는 다음 요청이 새 데이터를 기다리게 해(오래된 화면 없이) 저장 직후 공개 페이지에 반영됩니다.
-  updateTag(CONTENT_CACHE_TAG);
+  // 초안끼리의 저장(초안 자동 저장 포함)은 공개 결과가 같으므로 무효화하지 않습니다.
+  if (result.affectsPublic) updateTag(CONTENT_CACHE_TAG);
   if (id === null) return { createdId: result.id };
 
   return {

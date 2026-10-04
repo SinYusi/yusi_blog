@@ -44,6 +44,7 @@ const AUTOSAVE_DELAY_MS = 2000;
 
 type AutosaveState =
   | { status: "idle" }
+  | { status: "queued" }
   | { status: "saving" }
   | { status: "saved"; message: string; savedAt: string }
   | { status: "blocked" }
@@ -215,6 +216,8 @@ export function PostForm({
     changeVersionRef.current += 1;
     setDirty(true);
     if (!autosave) return;
+    // 이전 자동 저장 결과 대신 곧 저장할 변경이 있음을 알립니다. 진행 중인 저장은 그대로 보여 줍니다.
+    setAutoState((prev) => (prev.status === "saving" ? prev : { status: "queued" }));
     clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => runAutosaveRef.current(), AUTOSAVE_DELAY_MS);
   }, [autosave]);
@@ -277,9 +280,15 @@ export function PostForm({
     }
     const formData = buildFormData(form, tags);
     if (!formData) return;
-    // 자동 저장에서 빼는 입력(초안이 아닌 발행 설정, 확정하지 않은 태그)이 있으면 저장 뒤에도 저장하지 않은 변경으로 남깁니다.
-    const complete = formData.get("publishMode") === "draft" && !normalizeTagName(tagDraft);
+    // 자동 저장에서 빼는 입력이 있으면 저장 뒤에도 저장하지 않은 변경으로 남깁니다.
+    // - 초안이 아닌 발행 설정, 확정하지 않은 태그: 발행·태그 생성은 저장 버튼으로만 합니다.
+    // - 주소(slug): 고치는 도중의 값이 저장되면 그 값마다 이전 주소 리다이렉트가 남으므로(ADR-0012) 저장된 주소를 보냅니다.
+    const complete =
+      formData.get("publishMode") === "draft" &&
+      !normalizeTagName(tagDraft) &&
+      formData.get("slug") === initial.slug;
     formData.set("publishMode", "draft");
+    formData.set("slug", initial.slug);
     formData.delete("scheduledAt");
     if (!validatePostInput(readPostForm(formData), new Date(), "defer").ok) {
       setAutoState({ status: "blocked" });
@@ -298,19 +307,26 @@ export function PostForm({
     if (result.status === "saved") {
       baseUpdatedAtRef.current = result.updatedAt;
       if (changeVersionRef.current === version && complete) setDirty(false);
-      // 고친 뒤 자동 저장에 성공했으면 앞서 직접 저장에서 난 입력 오류 표시는 더 이상 맞지 않으므로 지웁니다.
-      if (state.status === "error") setLocalState({ status: "idle" });
+      // 모든 입력을 저장했으면 앞서 난 입력 오류 표시는 더 이상 맞지 않으므로 지웁니다.
+      // 일부만 저장했으면 빠진 입력(예: 예약 시각)의 오류일 수 있어 남겨 둡니다.
+      if (complete && state.status === "error") setLocalState({ status: "idle" });
       setAutoState({
         status: "saved",
         message: complete
           ? "자동 저장했습니다."
-          : "발행 설정과 입력 중인 태그를 뺀 내용을 자동 저장했습니다. 나머지는 저장 버튼으로 저장하세요.",
+          : "주소·발행 설정·입력 중인 태그를 뺀 내용을 자동 저장했습니다. 나머지는 저장 버튼으로 저장하세요.",
         savedAt: result.savedAt,
       });
     } else if (result.status === "error" && result.conflict) {
       // 덮어쓰지 않았음을 오류 요약으로 알리고, 이후 자동 저장을 멈춥니다.
       setAutoState({ status: "idle" });
       setLocalState(result);
+    } else if (result.status === "error" && Object.keys(result.fieldErrors).length > 0) {
+      // 서버에서만 알 수 있는 입력 오류(주소·시리즈 순번 중복 등)는 직접 저장과 같이 칸마다 보여 주되,
+      // 입력하는 중이므로 오류 요약으로 초점을 옮기지는 않습니다(이미 알린 것으로 표시).
+      announcedRef.current = result;
+      setLocalState(result);
+      setAutoState({ status: "blocked" });
     } else {
       setAutoState({
         status: "failed",
@@ -384,15 +400,17 @@ export function PostForm({
           ? `자동 저장하지 못했습니다. ${autoState.message}`
           : autoState.status === "blocked"
             ? "입력 오류가 있어 자동 저장하지 않았습니다. 고치면 다시 저장합니다."
-            : dirty && !autosave
-              ? "저장하지 않은 변경 사항이 있습니다."
-              : lastSaved
-                ? `${lastSaved.message} ${formatDateTime(new Date(lastSaved.savedAt))}`
-                : createdNotice
-                  ? "글을 만들었습니다. 이어서 고칠 수 있습니다."
-                  : autosave
-                    ? "초안은 입력을 멈추면 자동으로 저장합니다."
-                    : "";
+            : autoState.status === "queued"
+              ? "변경 사항을 곧 자동 저장합니다."
+              : dirty && !autosave
+                ? "저장하지 않은 변경 사항이 있습니다."
+                : lastSaved
+                  ? `${lastSaved.message} ${formatDateTime(new Date(lastSaved.savedAt))}`
+                  : createdNotice
+                    ? "글을 만들었습니다. 이어서 고칠 수 있습니다."
+                    : autosave
+                      ? "초안은 입력을 멈추면 자동으로 저장합니다."
+                      : "";
 
   const submitLabel = pending
     ? "저장 중…"
