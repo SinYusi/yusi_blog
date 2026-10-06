@@ -21,7 +21,7 @@
 | 인증            | Auth.js (GitHub OAuth)                | 관리자 1인 인증, `proxy.ts` 기반 라우트 보호 ([ADR-0009](adr/0009-admin-auth.md))                    |
 | 에디터          | Tiptap (ProseMirror)                  | 확장을 직접 작성할 수 있는 블록 에디터                                                               |
 | 코드 하이라이트 | Shiki                                 | 서버 렌더링으로 클라이언트 JS 0                                                                      |
-| 이미지 저장소   | Cloudflare R2 또는 Vercel Blob        | `next/image`와 결합해 최적화                                                                         |
+| 이미지 저장소   | Vercel Blob                           | `next/image`와 결합해 최적화, 도메인 없이 서빙 ([ADR-0010](adr/0010-image-storage.md))               |
 | 테스트          | Vitest, Testing Library, Playwright   | 단위, 컴포넌트, E2E                                                                                  |
 | 문서화          | Storybook                             | 디자인 시스템 문서화                                                                                 |
 | 배포 / CI       | Vercel, GitHub Actions, Lighthouse CI | PR마다 lint, test, 성능 측정                                                                         |
@@ -154,8 +154,7 @@ docs/               스펙, 로드맵, ADR
 
 ## 8. 미정 사항
 
-| 항목                 | 후보                       | 비고               |
-| -------------------- | -------------------------- | ------------------ |
-| 블로그 이름 / 도메인 | -                          | 커스텀 도메인 권장 |
-| 이미지 저장소        | Cloudflare R2, Vercel Blob | 2단계 시작 전 결정 |
-| 댓글                 | Giscus, 자체 구현          | Giscus로 시작 예정 |
+| 항목                 | 후보              | 비고               |
+| -------------------- | ----------------- | ------------------ |
+| 블로그 이름 / 도메인 | -                 | 커스텀 도메인 권장 |
+| 댓글                 | Giscus, 자체 구현 | Giscus로 시작 예정 |
