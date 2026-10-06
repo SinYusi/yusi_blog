@@ -107,8 +107,9 @@ tags                 unique(lower(name)) 추가: 대소문자만 다른 태그 �
 
 ```
 users        id, github_id, name, avatar_url, role
-images       id, url, width, height, alt, post_id, created_at
 ```
+
+본문 이미지는 별도 테이블 없이 에디터 원본(`posts.content`)의 이미지 노드에 주소·원본 크기·대체 텍스트·캡션을 둔다. 파일은 Vercel Blob에 있다([ADR-0010](adr/0010-image-storage.md)).
 
 ## 6. 디렉터리 구조
 

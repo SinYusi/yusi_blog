@@ -22,7 +22,12 @@ import {
  */
 
 /** 저장할 본문. null이면 기존 본문을 그대로 둡니다(에디터 원본이 없는 글). empty는 실제 내용이 없는 문서인지입니다. */
-export type PostContent = { json: unknown; html: string; empty: boolean } | null;
+export type PostContent = {
+  json: unknown;
+  html: string;
+  empty: boolean;
+  missingAlt: number;
+} | null;
 
 export type SavePostResult =
   | {
@@ -255,6 +260,12 @@ export async function savePost({
       const bodyEmpty = content ? content.empty : !contentHtml.trim();
       if (status !== "draft" && bodyEmpty) {
         throw new FieldValidationError({ content: "발행하거나 예약하려면 본문을 입력하세요." });
+      }
+      // 대체 텍스트가 없는 이미지는 화면 낭독기 사용자에게 내용이 전달되지 않으므로 공개 전에 막습니다(초안은 허용).
+      if (status !== "draft" && content && content.missingAlt > 0) {
+        throw new FieldValidationError({
+          content: `대체 텍스트가 없는 이미지가 ${content.missingAlt}개 있습니다. 발행하거나 예약하려면 모든 이미지에 대체 텍스트를 입력하세요.`,
+        });
       }
 
       const tagIds = await resolveTagIds(tx, input.tags);

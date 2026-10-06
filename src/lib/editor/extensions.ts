@@ -11,7 +11,7 @@ import { isAllowedLinkHref } from "./link-policy";
  * 같은 구성을 써야 에디터가 만든 문서(JSON)를 서버가 같은 스키마로 해석합니다. 확장을 바꾸면 두 쪽이 함께 바뀝니다.
  *
  * 지금 쓰는 것: 문단, h2/h3, 글머리·번호 목록, 인용, 링크, 굵게, 기울임, 인라인 코드, 줄바꿈(Shift+Enter),
- * 코드 블록(pre[data-language][data-filename]), 콜아웃(aside[data-callout]). 본문 HTML 규칙은 seed-data.ts 상단에 있습니다.
+ * 코드 블록(pre[data-language][data-filename]), 콜아웃(aside[data-callout]), 이미지(figure > img + figcaption, ADR-0010). 본문 HTML 규칙은 seed-data.ts 상단에 있습니다.
  * 공개 본문 규칙에 없는 서식(취소선, 밑줄, 구분선)은 끕니다.
  */
 
@@ -58,7 +58,11 @@ export function isCalloutType(value: unknown): value is CalloutType {
 }
 
 /** 에디터에서 블록을 편집하는 화면(React NodeView). 서버는 HTML만 만들므로 넘기지 않습니다. */
-export type EditorNodeViews = { codeBlock?: NodeViewRenderer; callout?: NodeViewRenderer };
+export type EditorNodeViews = {
+  codeBlock?: NodeViewRenderer;
+  callout?: NodeViewRenderer;
+  image?: NodeViewRenderer;
+};
 
 export function createEditorExtensions(nodeViews: EditorNodeViews = {}): Extensions {
   return [
@@ -139,6 +143,50 @@ export function createEditorExtensions(nodeViews: EditorNodeViews = {}): Extensi
           }),
         ];
       },
+    }),
+    // 이미지: 주소(Blob 공개 저장소, image-policy.ts)·원본 크기·대체 텍스트·캡션을 속성으로 둡니다.
+    // 크기는 공개 페이지가 자리를 미리 잡아 레이아웃 이동이 없도록 업로드할 때 브라우저에서 읽어 넣습니다.
+    Node.create({
+      name: "image",
+      group: "block",
+      atom: true,
+      draggable: true,
+      addAttributes() {
+        return {
+          src: { default: null },
+          alt: { default: "" },
+          width: { default: null },
+          height: { default: null },
+          caption: { default: "" },
+        };
+      },
+      // 에디터 안 복사·붙여넣기만 되살립니다. 다른 사이트의 <img>는 저장소 밖 주소라 받지 않습니다.
+      parseHTML() {
+        return [
+          {
+            tag: "figure[data-post-image]",
+            getAttrs: (element) => {
+              const img = element.querySelector("img");
+              if (!img) return false;
+              return {
+                src: img.getAttribute("src"),
+                alt: img.getAttribute("alt") ?? "",
+                width: Number(img.getAttribute("width")) || null,
+                height: Number(img.getAttribute("height")) || null,
+                caption: element.querySelector("figcaption")?.textContent ?? "",
+              };
+            },
+          },
+        ];
+      },
+      renderHTML({ node }) {
+        const { src, alt, width, height, caption } = node.attrs;
+        const img = ["img", { src, alt, width, height }] as const;
+        return caption
+          ? ["figure", { "data-post-image": "" }, img, ["figcaption", {}, caption]]
+          : ["figure", { "data-post-image": "" }, img];
+      },
+      addNodeView: nodeViews.image && (() => nodeViews.image!),
     }),
   ];
 }

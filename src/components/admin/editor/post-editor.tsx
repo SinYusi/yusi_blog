@@ -7,10 +7,12 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { previewPost, type PreviewResult } from "@/app/admin/(panel)/posts/actions";
 import { createEditorExtensions } from "@/lib/editor/extensions";
 import { isAllowedLinkHref } from "@/lib/editor/link-policy";
+import { IMAGE_CONTENT_TYPES } from "@/lib/editor/image-policy";
 import { serializeEditorDoc } from "@/lib/editor/transport";
 
 import { EditorSkeleton } from "./editor-skeleton";
-import { CalloutView, CodeBlockView } from "./node-views";
+import { CalloutView, CodeBlockView, ImageView } from "./node-views";
+import { ImageUploadError, uploadImage } from "./image-upload";
 import { SlashMenu } from "./slash-menu";
 import {
   LINK_KEYS,
@@ -342,6 +344,10 @@ function Preview({ result, pending }: { result: PreviewResult | null; pending: b
   );
 }
 
+function imageFiles(list: FileList | undefined) {
+  return Array.from(list ?? []).filter((file) => file.type.startsWith("image/"));
+}
+
 const editorAttributes = {
   role: "textbox",
   "aria-multiline": "true",
@@ -363,6 +369,9 @@ export function PostEditor({
 } = {}) {
   const openLinkRef = useRef<() => void>(() => {});
   const slashKeyRef = useRef<(key: string) => boolean>(() => false);
+  const insertImagesRef = useRef<(files: File[], pos?: number) => void>(() => {});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageStatus, setImageStatus] = useState<string | null>(null);
   const previewRequestRef = useRef(0);
   const [link, setLink] = useState<{ href: string } | null>(null);
   const [mode, setMode] = useState<"write" | "preview">("write");
@@ -376,6 +385,7 @@ export function PostEditor({
       ...createEditorExtensions({
         codeBlock: ReactNodeViewRenderer(CodeBlockView),
         callout: ReactNodeViewRenderer(CalloutView),
+        image: ReactNodeViewRenderer(ImageView),
       }),
       // 링크 단축키(Mod-k)는 Tiptap 기본값에 없어 직접 더합니다. 주소 입력 창을 엽니다.
       Extension.create({
@@ -411,6 +421,24 @@ export function PostEditor({
       attributes: errorId
         ? { ...editorAttributes, "aria-invalid": "true", "aria-describedby": errorId }
         : editorAttributes,
+      // 이미지 파일을 붙여넣거나 끌어 놓으면 저장소에 올린 뒤 그 자리에 넣습니다(글자·HTML 붙여넣기는 그대로).
+      handlePaste: (_view, event) => {
+        const files = imageFiles(event.clipboardData?.files);
+        if (files.length === 0) return false;
+        event.preventDefault();
+        insertImagesRef.current(files);
+        return true;
+      },
+      handleDrop: (view, event, _slice, moved) => {
+        const files = imageFiles(event.dataTransfer?.files);
+        if (moved || files.length === 0) return false;
+        event.preventDefault();
+        insertImagesRef.current(
+          files,
+          view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos,
+        );
+        return true;
+      },
     },
   });
 
@@ -426,6 +454,41 @@ export function PostEditor({
 
   useEffect(() => {
     openLinkRef.current = openLinkForm;
+  });
+
+  /**
+   * 이미지를 하나씩 올리고 넣습니다. pos가 있으면(끌어 놓기) 그 자리에, 없으면 지금 커서 자리에 넣습니다.
+   * 넣을 수 없는 자리(콜아웃 안 등)면 알리고 멈춥니다. 이때 이미 올린 파일은 저장소에 남습니다.
+   */
+  async function insertImages(files: File[], pos?: number) {
+    if (!editor) return;
+    for (const [index, file] of files.entries()) {
+      setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${files.length})`);
+      let attrs: Awaited<ReturnType<typeof uploadImage>>;
+      try {
+        attrs = await uploadImage(file);
+      } catch (error) {
+        setImageStatus(
+          error instanceof ImageUploadError ? error.message : "이미지를 올리지 못했습니다.",
+        );
+        return;
+      }
+      const node = { type: "image", attrs: { ...attrs, alt: "", caption: "" } };
+      const chain = editor.chain().focus();
+      const inserted = (
+        pos === undefined ? chain.insertContent(node) : chain.insertContentAt(pos, node)
+      ).run();
+      if (!inserted) {
+        setImageStatus("이 자리에는 이미지를 넣을 수 없습니다. 콜아웃 밖에 넣어 주세요.");
+        return;
+      }
+      pos = undefined;
+    }
+    setImageStatus("이미지를 넣었습니다. 이미지 아래에 대체 텍스트를 입력하세요.");
+  }
+
+  useEffect(() => {
+    insertImagesRef.current = (files, pos) => void insertImages(files, pos);
   });
 
   if (!editor) return <EditorSkeleton />;
@@ -482,10 +545,29 @@ export function PostEditor({
         {link && <LinkForm editor={editor} initialHref={link.href} onClose={() => setLink(null)} />}
         <div className="relative rounded-xl border border-border-strong bg-surface focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-hover">
           <EditorContent editor={editor} />
-          <SlashMenu editor={editor} keyRef={slashKeyRef} />
+          <SlashMenu
+            editor={editor}
+            keyRef={slashKeyRef}
+            onImage={() => fileInputRef.current?.click()}
+          />
         </div>
         <p className="font-mono text-caption text-muted">
-          {`블록 넣기 / · 굵게 ${shortcutLabel(["B"])} · 기울임 ${shortcutLabel(["I"])} · 코드 ${shortcutLabel(["E"])} · 링크 ${shortcutLabel(LINK_KEYS)} · 줄바꿈 Shift+Enter`}
+          {`블록 넣기 / · 이미지 붙여넣기·끌어 놓기 · 굵게 ${shortcutLabel(["B"])} · 기울임 ${shortcutLabel(["I"])} · 코드 ${shortcutLabel(["E"])} · 링크 ${shortcutLabel(LINK_KEYS)} · 줄바꿈 Shift+Enter`}
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={IMAGE_CONTENT_TYPES.join(",")}
+          multiple
+          hidden
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            event.target.value = "";
+            if (files.length > 0) void insertImages(files);
+          }}
+        />
+        <p role="status" className="text-meta text-muted">
+          {imageStatus}
         </p>
       </div>
 

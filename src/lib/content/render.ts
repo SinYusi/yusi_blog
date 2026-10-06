@@ -5,9 +5,12 @@ import { toString } from "hast-util-to-string";
 import rehypeParse from "rehype-parse";
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
+import { getImageProps } from "next/image";
 import { createHighlighter } from "shiki";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
+
+import { isAllowedImageSrc, isImageDimension } from "@/lib/editor/image-policy";
 
 import { LOG_LANGUAGE, resolveLanguage, SUPPORTED_LANGUAGES } from "./code-languages";
 
@@ -18,6 +21,7 @@ import { LOG_LANGUAGE, resolveLanguage, SUPPORTED_LANGUAGES } from "./code-langu
  * 1. 정화: 허용한 태그·속성만 남깁니다 (seed-data.ts 상단의 본문 HTML 규칙).
  * 2. 코드 블록: <pre data-language data-filename>을 Shiki로 하이라이트하고 파일명·복사 버튼 머리글을 붙입니다.
  * 3. 표: 좁은 화면에서 가로 스크롤되도록 감쌉니다.
+ * 3-1. 이미지: next/image의 최적화 주소(srcset)로 바꿉니다(ADR-0010).
  * 4. 목차: id가 있는 h2를 모읍니다.
  */
 
@@ -46,13 +50,14 @@ const sanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
   // 본문 id가 레이아웃의 id(예: main)와 겹치지 않도록 고정 접두사를 붙입니다. 목차는 정화된 id로 만듭니다.
   clobberPrefix: HEADING_ID_PREFIX,
-  tagNames: [...(defaultSchema.tagNames ?? []), "aside"],
+  tagNames: [...(defaultSchema.tagNames ?? []), "aside", "figure", "figcaption"],
   attributes: {
     ...defaultSchema.attributes,
     h2: [...(defaultSchema.attributes?.h2 ?? []), "id"],
     h3: [...(defaultSchema.attributes?.h3 ?? []), "id"],
     pre: [...(defaultSchema.attributes?.pre ?? []), "dataLanguage", "dataFilename"],
     aside: [["dataCallout", "info", "warning", "danger"]],
+    img: [...(defaultSchema.attributes?.img ?? []), "alt", "width", "height"],
   },
 };
 
@@ -102,6 +107,50 @@ function rehypeCodeBlocks(highlighter: Awaited<ReturnType<typeof createHighlight
 
       parent.children[index] = figure;
       return "skip";
+    });
+  };
+}
+
+/** 본문 너비(--container-article 42.5rem = 680px)에 맞춘 sizes. 좁은 화면에서는 화면 너비만큼 */
+const IMAGE_SIZES = "(min-width: 768px) 680px, 100vw";
+
+/*
+ * 본문은 HTML 문자열로 넣으므로 <Image> 컴포넌트를 쓸 수 없어, getImageProps로 같은 속성을 만들어 바꿉니다.
+ * 원본 width·height는 그대로 두어 자리를 미리 잡고(레이아웃 이동 없음), 첫 이미지만 바로 불러옵니다.
+ * 저장소 밖 주소나 크기 정보가 없는 이미지는 최적화할 수 없으므로 지웁니다(에디터 검사를 우회한 경우).
+ */
+function rehypeImages() {
+  return (tree: Root) => {
+    let first = true;
+    visit(tree, "element", (node, index, parent) => {
+      if (node.tagName !== "img" || index === undefined || !parent) return;
+      const { src, alt } = node.properties;
+      const width = Number(node.properties.width);
+      const height = Number(node.properties.height);
+      if (!isAllowedImageSrc(src) || !isImageDimension(width) || !isImageDimension(height)) {
+        parent.children.splice(index, 1);
+        return index;
+      }
+      const { props } = getImageProps({
+        src,
+        alt: typeof alt === "string" ? alt : "",
+        width,
+        height,
+        sizes: IMAGE_SIZES,
+        quality: 75,
+        loading: first ? "eager" : "lazy",
+      });
+      first = false;
+      node.properties = {
+        src: props.src,
+        srcSet: props.srcSet,
+        sizes: props.sizes,
+        alt: props.alt,
+        width: props.width,
+        height: props.height,
+        loading: props.loading,
+        decoding: props.decoding,
+      };
     });
   };
 }
@@ -164,6 +213,7 @@ export async function renderPostHtml(contentHtml: string) {
     })
     .use(() => rehypeCodeBlocks(highlighter))
     .use(rehypeTableScroll)
+    .use(rehypeImages)
     .use(rehypeStringify)
     .process(contentHtml);
 

@@ -9,6 +9,8 @@
  * - 코드: <pre data-language="..." data-filename="..."><code>...</code></pre>. 하이라이트는 렌더링 단계에서 합니다.
  * - 로그: <pre data-language="log"><code>...</code></pre>
  * - 콜아웃: <aside data-callout="info|warning|danger">...</aside>
+ * - 이미지: <figure><img src="Blob 공개 주소" alt="..." width="..." height="..."><figcaption>...</figcaption></figure>
+ *   (캡션은 선택). 렌더링 단계가 최적화 주소(srcset)로 바꿉니다(ADR-0010).
  */
 
 function escapeHtml(text: string) {
