@@ -16,11 +16,11 @@
 | [0007](0007-build-verification-on-vercel.md) | 빌드 검증은 Vercel 미리보기 빌드로                    | 승인 |
 | [0008](0008-replace-gemini-with-codex.md)    | Gemini 리뷰를 Codex 코드 리뷰로 교체                  | 승인 |
 | [0009](0009-admin-auth.md)                   | 관리자 인증: Auth.js + GitHub OAuth, JWT 세션         | 승인 |
-| [0010](0010-image-storage.md)                | 이미지 저장소: Vercel Blob                            | 제안 |
+| [0010](0010-image-storage.md)                | 이미지 저장소: Vercel Blob                            | 승인 |
 | [0011](0011-editor-content-format.md)        | 에디터 본문 저장 형식과 HTML 생성                     | 승인 |
 | [0012](0012-post-slug-and-redirects.md)      | 글 주소(slug) 형식과 주소 변경 시 리다이렉트          | 승인 |
 | [0013](0013-publish-revalidation.md)         | 발행 반영: 저장 시 updateTag, 예약 글은 캐시 수명으로 | 승인 |
-| [0014](0014-autosave-and-concurrency.md)     | 자동 저장 범위(저장된 초안만)와 동시 편집 충돌 방지   | 제안 |
+| [0014](0014-autosave-and-concurrency.md)     | 자동 저장 범위(저장된 초안만)와 동시 편집 충돌 방지   | 승인 |
 
 ## 작성 방법
 
