@@ -171,8 +171,11 @@ export function createEditorExtensions(nodeViews: EditorNodeViews = {}): Extensi
             getAttrs: (element) => {
               const img = element.querySelector("img");
               if (!img) return false;
+              // 업로드 중인 자리 표시(blob: 미리보기 주소)를 복사해 붙여넣은 사본은 실제 주소로 바뀌지 않으므로 받지 않습니다.
+              const src = img.getAttribute("src");
+              if (!src || src.startsWith("blob:")) return false;
               return {
-                src: img.getAttribute("src"),
+                src,
                 alt: img.getAttribute("alt") ?? "",
                 width: Number(img.getAttribute("width")) || null,
                 height: Number(img.getAttribute("height")) || null,

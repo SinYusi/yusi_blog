@@ -540,7 +540,9 @@ export function PostEditor({
           } else {
             tr.delete(placed.pos, placed.pos + (tr.doc.nodeAt(placed.pos)?.nodeSize ?? 1));
           }
-          editor.view.dispatch(tr);
+          // 실행 취소 기록에 넣지 않습니다. 넣으면 ⌘Z가 '자리 표시 → 실제 이미지' 교체만 되돌려 이미 폐기한
+          // 미리보기 주소로 돌아갑니다. 실행 취소는 처음 이미지를 넣은 일 자체를 되돌립니다.
+          editor.view.dispatch(tr.setMeta("addToHistory", false));
         }
         URL.revokeObjectURL(preview);
       }
