@@ -11,7 +11,10 @@ const nextConfig: NextConfig = {
     // 본문 이미지는 이 배포에 연결된 Vercel Blob 공개 저장소의 posts/ 경로만 최적화합니다(ADR-0010,
     // lib/editor/image-policy.ts). 다른 Blob 저장소 주소로 이 배포의 변환량을 쓰지 못하게 호스트를 하나로 고정합니다.
     remotePatterns: blobHost
-      ? [{ protocol: "https", hostname: blobHost, pathname: "/posts/**" }]
+      ? [
+          // search·port를 비워 두면 와일드카드가 되어 ?nonce= 같은 변형으로 변환량을 쓸 수 있으므로 비어 있는 값만 허용합니다.
+          { protocol: "https", hostname: blobHost, port: "", pathname: "/posts/**", search: "" },
+        ]
       : [],
     qualities: [75],
   },

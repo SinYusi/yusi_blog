@@ -399,6 +399,8 @@ export function PostEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 진행 중인 업로드 묶음 수. 붙여넣기를 여러 번 하면 업로드가 겹치므로, 마지막 업로드가 끝날 때만 '끝남'을 알립니다.
   const activeUploadsRef = useRef(0);
+  // 겹친 업로드들의 실패 사유를 모았다가 마지막 업로드가 끝날 때 한꺼번에 알립니다(나중 성공이 앞의 실패를 덮지 않게).
+  const uploadFailuresRef = useRef<string[]>([]);
   // 끝난 업로드의 결과(uploadId → 실제 주소·크기, 실패면 null). 다시 실행으로 되살아난 자리 표시도 이 결과로 바꿉니다.
   const uploadResultsRef = useRef(new Map<string, UploadedImage | null>());
   const [imageStatus, setImageStatus] = useState<string | null>(null);
@@ -539,7 +541,6 @@ export function PostEditor({
     // 2. 하나씩 올리고 자리 표시를 바꿉니다. 업로드가 겹치면 마지막이 끝날 때만 '끝남'을 알립니다.
     activeUploadsRef.current += 1;
     if (activeUploadsRef.current === 1) onUploadingChange?.(true);
-    let failed: string | null = null;
     try {
       for (const [index, { file, uploadId, preview }] of pending.entries()) {
         setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${pending.length})`);
@@ -547,8 +548,9 @@ export function PostEditor({
         try {
           uploaded = await uploadImage(file);
         } catch (error) {
-          failed =
-            error instanceof ImageUploadError ? error.message : "이미지를 올리지 못했습니다.";
+          uploadFailuresRef.current.push(
+            error instanceof ImageUploadError ? error.message : "이미지를 올리지 못했습니다.",
+          );
         }
         // 결과를 기록하고 자리 표시를 바꿉니다. 그사이 지운 자리 표시는 건너뛰지만(올린 파일은 저장소에 남음, ADR-0010),
         // 나중에 다시 실행(⌘⇧Z)으로 돌아와도 아래 'update' 처리기가 같은 결과로 바꿉니다.
@@ -558,9 +560,17 @@ export function PostEditor({
       }
     } finally {
       activeUploadsRef.current -= 1;
-      if (activeUploadsRef.current === 0) onUploadingChange?.(false);
+      if (activeUploadsRef.current === 0) {
+        onUploadingChange?.(false);
+        const failures = uploadFailuresRef.current;
+        uploadFailuresRef.current = [];
+        setImageStatus(
+          failures.length > 0
+            ? `이미지 ${failures.length}개를 올리지 못해 본문에서 뺐습니다. ${failures[0]}`
+            : "이미지를 넣었습니다. 이미지 아래에 대체 텍스트를 입력하세요.",
+        );
+      }
     }
-    setImageStatus(failed ?? "이미지를 넣었습니다. 이미지 아래에 대체 텍스트를 입력하세요.");
   }
 
   useEffect(() => {

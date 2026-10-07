@@ -17,16 +17,18 @@ export type UploadedImage = { src: string; width: number; height: number };
 export class ImageUploadError extends Error {}
 
 /**
- * 파일 앞부분(매직 바이트)으로 이미지 형식을 판별합니다. 브라우저가 형식을 알려 주지 않은 파일(type이 빈 문자열)에 씁니다.
- * JPEG(FF D8 FF), PNG(89 50 4E 47), WebP(RIFF....WEBP), AVIF(....ftypavif / ftypavis)만 알아봅니다.
+ * 파일 앞부분(매직 바이트)으로 실제 이미지 형식을 판별합니다. 브라우저가 알려 주는 type은 확장자로 정해지므로
+ * (PNG 파일 이름이 .jpg면 image/jpeg), 업로드 형식·확장자는 항상 이 값을 씁니다.
+ * JPEG(FF D8 FF), PNG(89 50 4E 47), WebP(RIFF....WEBP), AVIF(ftyp 상자의 브랜드에 avif·avis)만 알아봅니다.
  */
 async function sniffImageType(file: File): Promise<string | null> {
-  const b = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const b = new Uint8Array(await file.slice(0, 32).arrayBuffer());
   const ascii = (from: number, to: number) => String.fromCharCode(...b.slice(from, to));
   if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
   if (b[0] === 0x89 && ascii(1, 4) === "PNG") return "image/png";
   if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
-  if (ascii(4, 8) === "ftyp" && ["avif", "avis"].includes(ascii(8, 12))) return "image/avif";
+  // AVIF는 주 브랜드가 mif1이고 호환 브랜드에 avif가 있는 경우도 있어 ftyp 상자 앞부분 전체에서 찾습니다.
+  if (ascii(4, 8) === "ftyp" && /avi[fs]/.test(ascii(8, 32))) return "image/avif";
   return null;
 }
 
@@ -43,8 +45,8 @@ function storageName(file: File, type: string) {
 }
 
 export async function uploadImage(file: File): Promise<UploadedImage> {
-  // 브라우저가 알려 준 형식이 없으면 파일 앞부분으로 판별해, 그 형식을 확장자·업로드 형식에 함께 씁니다.
-  const type = file.type || (await sniffImageType(file)) || "";
+  // 실제 형식은 파일 앞부분으로 판별해, 그 형식을 확장자·업로드 형식에 함께 씁니다(브라우저의 type은 확장자 기준).
+  const type = (await sniffImageType(file)) ?? "";
   if (!IMAGE_CONTENT_TYPES.includes(type)) {
     throw new ImageUploadError("JPEG, PNG, WebP, AVIF 이미지만 올릴 수 있습니다.");
   }
