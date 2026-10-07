@@ -402,6 +402,8 @@ export function PostEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 진행 중인 업로드 묶음 수. 붙여넣기를 여러 번 하면 업로드가 겹치므로, 마지막 업로드가 끝날 때만 '끝남'을 알립니다.
   const activeUploadsRef = useRef(0);
+  // 업로드 중에는 본문에 미리보기 주소(blob:)인 자리 표시가 있어 서버 미리보기가 실패하므로 미리보기를 막습니다.
+  const [uploading, setUploading] = useState(false);
   // 겹친 업로드들의 실패 사유를 모았다가 마지막 업로드가 끝날 때 한꺼번에 알립니다(나중 성공이 앞의 실패를 덮지 않게).
   const uploadFailuresRef = useRef<string[]>([]);
   // 끝난 업로드의 결과(uploadId → 실제 주소·크기, 실패면 null). 다시 실행으로 되살아난 자리 표시도 이 결과로 바꿉니다.
@@ -549,7 +551,10 @@ export function PostEditor({
 
     // 2. 하나씩 올리고 자리 표시를 바꿉니다. 업로드가 겹치면 마지막이 끝날 때만 '끝남'을 알립니다.
     activeUploadsRef.current += 1;
-    if (activeUploadsRef.current === 1) onUploadingChange?.(true);
+    if (activeUploadsRef.current === 1) {
+      setUploading(true);
+      onUploadingChange?.(true);
+    }
     try {
       for (const [index, { file, uploadId, preview }] of pending.entries()) {
         setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${pending.length})`);
@@ -570,6 +575,7 @@ export function PostEditor({
     } finally {
       activeUploadsRef.current -= 1;
       if (activeUploadsRef.current === 0) {
+        setUploading(false);
         onUploadingChange?.(false);
         const failures = uploadFailuresRef.current;
         uploadFailuresRef.current = [];
@@ -640,9 +646,10 @@ export function PostEditor({
           type="button"
           aria-pressed={mode === "preview"}
           onClick={() => showPreview(editor)}
-          className={modeButtonClass}
+          disabled={uploading}
+          className={`${modeButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
         >
-          미리보기
+          {uploading ? "미리보기 (이미지 올리는 중)" : "미리보기"}
         </button>
       </div>
 
