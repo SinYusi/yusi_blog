@@ -470,8 +470,11 @@ export function PostEditor({
   async function insertImages(files: File[], startPos?: number) {
     if (!editor) return;
     let pos = startPos ?? editor.state.selection.from;
+    // 다른 사람의 변경(이어서 쓴 글, 겹친 다른 업로드)이 같은 자리에 들어오면 위치는 그 앞에 남습니다(assoc -1).
+    // 그래야 붙여넣은 순서대로, 이어서 쓴 글보다 앞에 이미지가 들어갑니다. 이 묶음이 넣은 이미지 뒤로만 이동합니다.
+    let ownInsert = false;
     const follow = ({ transaction }: { transaction: Transaction }) => {
-      pos = transaction.mapping.map(pos);
+      pos = transaction.mapping.map(pos, ownInsert ? 1 : -1);
     };
     editor.on("transaction", follow);
     activeUploadsRef.current += 1;
@@ -497,7 +500,13 @@ export function PostEditor({
             : pos;
         const before = editor.state.doc;
         // 업로드를 기다리는 동안 다른 칸(제목·캡션 등)을 쓰고 있을 수 있으므로 초점은 옮기지 않습니다.
-        editor.chain().insertContentAt(target, node).run();
+        ownInsert = true;
+        try {
+          // 사용자의 커서도 옮기지 않습니다(updateSelection: false).
+          editor.chain().insertContentAt(target, node, { updateSelection: false }).run();
+        } finally {
+          ownInsert = false;
+        }
         // 콜아웃 안처럼 규칙에 어긋나는 자리는 에디터가 변경을 적용하지 않습니다(extensions.ts).
         if (editor.state.doc === before) {
           setImageStatus("이 자리에는 이미지를 넣을 수 없습니다. 콜아웃 밖에 넣어 주세요.");
