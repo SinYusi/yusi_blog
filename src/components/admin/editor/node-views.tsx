@@ -96,8 +96,10 @@ export function CalloutView({ node, updateAttributes }: ReactNodeViewProps) {
  */
 export function ImageView({ node, updateAttributes }: ReactNodeViewProps) {
   const id = useId();
-  const { src, alt, width, height, caption } = node.attrs;
+  const { src, alt, width, height, caption, uploadId } = node.attrs;
   const missingAlt = !String(alt).trim();
+  // 업로드 중인 자리 표시는 브라우저의 미리보기 주소(blob:)를 보여 줍니다.
+  const uploading = uploadId !== null;
   // 에디터 안의 입력칸에서 Enter가 글 저장 폼 제출로 이어지지 않게 막습니다.
   const blockEnter = (event: React.KeyboardEvent) => {
     if (event.key === "Enter") event.preventDefault();
@@ -107,7 +109,15 @@ export function ImageView({ node, updateAttributes }: ReactNodeViewProps) {
     <NodeViewWrapper as="figure" data-post-image="">
       {/* 관리자 편집 화면이라 원본을 그대로 보여 줍니다. 공개 페이지는 렌더링 단계에서 최적화 주소로 바꿉니다. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} width={width} height={height} draggable={false} />
+      <img
+        src={src}
+        alt={alt}
+        width={width ?? undefined}
+        height={height ?? undefined}
+        draggable={false}
+        className={uploading ? "opacity-60" : undefined}
+      />
+      {uploading && <p className="mt-2 font-mono text-caption text-muted">올리는 중…</p>}
       <div contentEditable={false} className="mt-3 flex flex-col gap-2">
         <label htmlFor={`${id}-alt`} className="font-mono text-caption text-muted">
           대체 텍스트

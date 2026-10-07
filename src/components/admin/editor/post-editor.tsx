@@ -1,7 +1,7 @@
 "use client";
 
 import { Extension, type Editor, type JSONContent } from "@tiptap/core";
-import type { Transaction } from "@tiptap/pm/state";
+import { TextSelection } from "@tiptap/pm/state";
 import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -463,62 +463,92 @@ export function PostEditor({
   });
 
   /**
-   * 이미지를 하나씩 올리고 넣습니다. pos가 있으면(끌어 놓기) 그 자리에, 없으면 시작할 때의 커서 자리에 넣습니다.
-   * 업로드 중에도 계속 쓸 수 있으므로, 시작 위치를 그 사이의 모든 문서 변경에 맞춰 옮겨(mapping) 끝난 뒤 그 자리에 넣습니다.
-   * 넣을 수 없는 자리(콜아웃 안 등)면 알리고 멈춥니다. 이때 이미 올린 파일은 저장소에 남습니다(ADR-0010).
+   * 이미지 넣기. 붙여넣거나 끌어 놓는 순간 자리 표시(미리보기 주소 + uploadId)를 그 자리에 넣고,
+   * 하나씩 업로드가 끝나면 그 노드를 찾아 실제 주소·크기로 바꿉니다. 자리를 먼저 차지하므로 업로드 중에
+   * 글을 더 쓰거나 다른 이미지를 겹쳐 넣어도 붙여넣은 순서와 위치가 그대로 유지됩니다.
+   * 넣을 수 없는 자리(콜아웃 안 등)면 올리지 않고 알립니다. 업로드에 실패한 이미지는 자리 표시를 지웁니다.
    */
   async function insertImages(files: File[], startPos?: number) {
     if (!editor) return;
-    let pos = startPos ?? editor.state.selection.from;
-    // 다른 사람의 변경(이어서 쓴 글, 겹친 다른 업로드)이 같은 자리에 들어오면 위치는 그 앞에 남습니다(assoc -1).
-    // 그래야 붙여넣은 순서대로, 이어서 쓴 글보다 앞에 이미지가 들어갑니다. 이 묶음이 넣은 이미지 뒤로만 이동합니다.
-    let ownInsert = false;
-    const follow = ({ transaction }: { transaction: Transaction }) => {
-      pos = transaction.mapping.map(pos, ownInsert ? 1 : -1);
+    const findImage = (uploadId: string) => {
+      let found: { pos: number; attrs: Record<string, unknown> } | null = null;
+      editor.state.doc.descendants((node, nodePos) => {
+        if (found) return false;
+        if (node.type.name === "image" && node.attrs.uploadId === uploadId) {
+          found = { pos: nodePos, attrs: node.attrs };
+        }
+      });
+      return found as { pos: number; attrs: Record<string, unknown> } | null;
     };
-    editor.on("transaction", follow);
+
+    // 1. 자리 표시를 순서대로 넣습니다. 다음 이미지는 바로 앞 이미지 뒤에 들어갑니다.
+    let pos = startPos ?? editor.state.selection.from;
+    const pending: { file: File; uploadId: string; preview: string }[] = [];
+    for (const file of files) {
+      const uploadId = crypto.randomUUID();
+      const preview = URL.createObjectURL(file);
+      const node = { type: "image", attrs: { src: preview, uploadId, alt: "", caption: "" } };
+      // 빈 문단(예: /이미지를 고른 자리)이면 그 문단을 이미지로 바꾸고, 아니면 그 위치에 넣습니다.
+      const $pos = editor.state.doc.resolve(Math.min(pos, editor.state.doc.content.size));
+      const target =
+        $pos.parent.isTextblock && $pos.parent.content.size === 0 && $pos.depth > 0
+          ? { from: $pos.before(), to: $pos.after() }
+          : $pos.pos;
+      editor.chain().insertContentAt(target, node, { updateSelection: false }).run();
+      const placed = findImage(uploadId);
+      if (!placed) {
+        // 콜아웃 안처럼 규칙에 어긋나는 자리는 에디터가 변경을 적용하지 않습니다(extensions.ts).
+        URL.revokeObjectURL(preview);
+        setImageStatus("이 자리에는 이미지를 넣을 수 없습니다. 콜아웃 밖에 넣어 주세요.");
+        break;
+      }
+      pos = placed.pos + (editor.state.doc.nodeAt(placed.pos)?.nodeSize ?? 1);
+      pending.push({ file, uploadId, preview });
+    }
+    if (pending.length === 0) return;
+    // 보통 붙여넣기처럼 커서를 마지막 이미지 뒤(다음 문단 처음)로 옮겨, 이어 쓰거나 다시 붙여넣으면 그 뒤에 들어가게 합니다.
+    // 초점은 옮기지 않고, 업로드가 끝나 노드를 바꿀 때도 커서·초점을 건드리지 않습니다.
+    editor.view.dispatch(
+      editor.state.tr.setSelection(TextSelection.near(editor.state.doc.resolve(pos))),
+    );
+
+    // 2. 하나씩 올리고 자리 표시를 바꿉니다. 업로드가 겹치면 마지막이 끝날 때만 '끝남'을 알립니다.
     activeUploadsRef.current += 1;
     if (activeUploadsRef.current === 1) onUploadingChange?.(true);
+    let failed: string | null = null;
     try {
-      for (const [index, file] of files.entries()) {
-        setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${files.length})`);
-        let attrs: Awaited<ReturnType<typeof uploadImage>>;
+      for (const [index, { file, uploadId, preview }] of pending.entries()) {
+        setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${pending.length})`);
+        let uploaded: Awaited<ReturnType<typeof uploadImage>> | null = null;
         try {
-          attrs = await uploadImage(file);
+          uploaded = await uploadImage(file);
         } catch (error) {
-          setImageStatus(
-            error instanceof ImageUploadError ? error.message : "이미지를 올리지 못했습니다.",
-          );
-          return;
+          failed =
+            error instanceof ImageUploadError ? error.message : "이미지를 올리지 못했습니다.";
         }
-        const node = { type: "image", attrs: { ...attrs, alt: "", caption: "" } };
-        // 빈 문단(예: /이미지를 고른 자리)이면 그 문단을 이미지로 바꾸고, 아니면 그 위치에 넣습니다.
-        const $pos = editor.state.doc.resolve(pos);
-        const target =
-          $pos.parent.isTextblock && $pos.parent.content.size === 0 && $pos.depth > 0
-            ? { from: $pos.before(), to: $pos.after() }
-            : pos;
-        const before = editor.state.doc;
-        // 업로드를 기다리는 동안 다른 칸(제목·캡션 등)을 쓰고 있을 수 있으므로 초점은 옮기지 않습니다.
-        ownInsert = true;
-        try {
-          // 사용자의 커서도 옮기지 않습니다(updateSelection: false).
-          editor.chain().insertContentAt(target, node, { updateSelection: false }).run();
-        } finally {
-          ownInsert = false;
+        // 그사이 사용자가 지운 자리 표시는 건너뜁니다(올린 파일은 저장소에 남음, ADR-0010).
+        const placed = findImage(uploadId);
+        if (placed) {
+          const tr = editor.state.tr;
+          if (uploaded) {
+            // 업로드 중에 입력한 대체 텍스트·캡션은 그대로 둡니다.
+            tr.setNodeMarkup(placed.pos, undefined, {
+              ...placed.attrs,
+              ...uploaded,
+              uploadId: null,
+            });
+          } else {
+            tr.delete(placed.pos, placed.pos + (tr.doc.nodeAt(placed.pos)?.nodeSize ?? 1));
+          }
+          editor.view.dispatch(tr);
         }
-        // 콜아웃 안처럼 규칙에 어긋나는 자리는 에디터가 변경을 적용하지 않습니다(extensions.ts).
-        if (editor.state.doc === before) {
-          setImageStatus("이 자리에는 이미지를 넣을 수 없습니다. 콜아웃 밖에 넣어 주세요.");
-          return;
-        }
+        URL.revokeObjectURL(preview);
       }
     } finally {
-      editor.off("transaction", follow);
       activeUploadsRef.current -= 1;
       if (activeUploadsRef.current === 0) onUploadingChange?.(false);
     }
-    setImageStatus("이미지를 넣었습니다. 이미지 아래에 대체 텍스트를 입력하세요.");
+    setImageStatus(failed ?? "이미지를 넣었습니다. 이미지 아래에 대체 텍스트를 입력하세요.");
   }
 
   useEffect(() => {

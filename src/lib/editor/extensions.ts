@@ -158,6 +158,9 @@ export function createEditorExtensions(nodeViews: EditorNodeViews = {}): Extensi
           width: { default: null },
           height: { default: null },
           caption: { default: "" },
+          // 업로드 중인 자리 표시: 붙여넣는 순간 이 id와 미리보기 주소로 넣었다가, 업로드가 끝나면 실제 주소로 바꾸고 지웁니다.
+          // HTML로는 내보내지 않습니다. 업로드 중에는 글을 저장하지 않으므로 저장된 문서에는 남지 않습니다.
+          uploadId: { default: null, rendered: false },
         };
       },
       // 에디터 안 복사·붙여넣기만 되살립니다. 다른 사이트의 <img>는 저장소 밖 주소라 받지 않습니다.
