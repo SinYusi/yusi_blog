@@ -359,12 +359,15 @@ const editorAttributes = {
 export function PostEditor({
   initialContent,
   onEditorChange,
+  onUploadingChange,
   errorId,
 }: {
   /** 편집할 글의 에디터 원본. 없으면 빈 문서로 시작합니다. */
   initialContent?: JSONContent | null;
   /** 에디터가 만들어지거나 사라질 때 알립니다. 글 저장 폼이 저장할 때 editor.getJSON()을 읽는 데 씁니다. */
   onEditorChange?: (editor: Editor | null) => void;
+  /** 이미지 업로드가 시작·끝날 때 알립니다. 업로드 중에 저장하면 이미지가 빠지므로 글 저장 폼이 저장을 막는 데 씁니다. */
+  onUploadingChange?: (uploading: boolean) => void;
   /** 본문 오류 메시지의 id. 있으면 본문 입력 영역을 aria-invalid로 표시하고 메시지와 연결합니다. */
   errorId?: string;
 } = {}) {
@@ -469,6 +472,7 @@ export function PostEditor({
       pos = transaction.mapping.map(pos);
     };
     editor.on("transaction", follow);
+    onUploadingChange?.(true);
     try {
       for (const [index, file] of files.entries()) {
         setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${files.length})`);
@@ -498,6 +502,7 @@ export function PostEditor({
       }
     } finally {
       editor.off("transaction", follow);
+      onUploadingChange?.(false);
     }
     setImageStatus("이미지를 넣었습니다. 이미지 아래에 대체 텍스트를 입력하세요.");
   }

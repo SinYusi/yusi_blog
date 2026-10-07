@@ -13,9 +13,21 @@ export const IMAGE_CAPTION_MAX = 300;
 /** Blob 안의 업로드 경로. next.config의 images.remotePatterns도 이 경로만 허용합니다. */
 export const IMAGE_PATH_PREFIX = "posts/";
 
-const BLOB_HOST = /^[a-z0-9]+\.public\.blob\.vercel-storage\.com$/;
+/**
+ * 이 배포가 쓰는 Blob 공개 저장소의 호스트. 저장소 id(BLOB_STORE_ID, 저장소를 연결하면 Vercel이 넣음)에서
+ * "store_"를 뗀 값의 소문자가 호스트 앞부분입니다. 다른 Vercel Blob 사용자의 저장소 주소를 받지 않기 위해
+ * 와일드카드 대신 이 호스트 하나만 허용합니다(next.config의 images.remotePatterns도 같은 함수를 씀).
+ * 저장소가 연결되지 않은 환경에서는 null이고, 이미지 주소를 하나도 허용하지 않습니다. 서버에서만 부릅니다.
+ */
+export function blobPublicHost(storeId = process.env.BLOB_STORE_ID): string | null {
+  const id = storeId
+    ?.trim()
+    .replace(/^store_/, "")
+    .toLowerCase();
+  return id && /^[a-z0-9]+$/.test(id) ? `${id}.public.blob.vercel-storage.com` : null;
+}
 
-/** 본문에 넣을 수 있는 이미지 주소인지: https, Blob 공개 저장소 호스트, posts/ 경로 */
+/** 본문에 넣을 수 있는 이미지 주소인지: https, 이 배포의 Blob 공개 저장소 호스트, posts/ 경로. 서버에서만 부릅니다. */
 export function isAllowedImageSrc(src: unknown): src is string {
   if (typeof src !== "string") return false;
   let url: URL;
@@ -26,7 +38,7 @@ export function isAllowedImageSrc(src: unknown): src is string {
   }
   return (
     url.protocol === "https:" &&
-    BLOB_HOST.test(url.hostname) &&
+    url.hostname === blobPublicHost() &&
     url.pathname.startsWith(`/${IMAGE_PATH_PREFIX}`) &&
     !url.search &&
     !url.hash

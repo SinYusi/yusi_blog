@@ -158,6 +158,8 @@ export function PostForm({
   const errors = state.status === "error" ? state.fieldErrors : {};
 
   const [editor, setEditor] = useState<Editor | null>(null);
+  // 이미지를 올리는 중에는 본문에 아직 이미지가 없으므로 저장하지 않습니다(직접·자동 모두).
+  const [uploading, setUploading] = useState(false);
   const [slug, setSlug] = useState(initial.slug);
   const [tags, setTags] = useState(initial.tags);
   const [tagDraft, setTagDraft] = useState("");
@@ -289,8 +291,8 @@ export function PostForm({
   async function runAutosave() {
     const form = formRef.current;
     if (!autosave || postId === null || conflict || !form) return;
-    if (pending || autoState.status === "saving") {
-      // 직접 저장이나 앞선 자동 저장이 진행 중이면, 그동안 생긴 변경은 그 저장이 끝난 뒤 다시 시도합니다.
+    if (pending || uploading || autoState.status === "saving") {
+      // 직접 저장·앞선 자동 저장·이미지 업로드가 진행 중이면, 그동안 생긴 변경은 그 일이 끝난 뒤 다시 시도합니다.
       autosaveTimerRef.current = setTimeout(() => runAutosaveRef.current(), AUTOSAVE_DELAY_MS);
       return;
     }
@@ -362,7 +364,7 @@ export function PostForm({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending || autoState.status === "saving") return;
+    if (pending || uploading || autoState.status === "saving") return;
 
     // 아직 추가하지 않은 태그 입력도 함께 저장합니다.
     const formData = buildFormData(event.currentTarget, [...tags, tagDraft]);
@@ -435,13 +437,15 @@ export function PostForm({
 
   const submitLabel = pending
     ? "저장 중…"
-    : publishMode === "draft"
-      ? "초안 저장"
-      : publishMode === "schedule"
-        ? "예약 저장"
-        : publicSlug
-          ? "저장"
-          : "발행";
+    : uploading
+      ? "이미지 올리는 중…"
+      : publishMode === "draft"
+        ? "초안 저장"
+        : publishMode === "schedule"
+          ? "예약 저장"
+          : publicSlug
+            ? "저장"
+            : "발행";
 
   return (
     <form
@@ -681,6 +685,7 @@ export function PostForm({
           <PostEditor
             initialContent={initial.content}
             onEditorChange={setEditor}
+            onUploadingChange={setUploading}
             errorId={errors.content ? errorId("content") : undefined}
           />
         )}
@@ -747,7 +752,9 @@ export function PostForm({
       <div className="flex flex-col gap-3 border-t border-border pt-6 md:flex-row md:items-center">
         <button
           type="submit"
-          disabled={pending || autoState.status === "saving" || (!legacyBody && !editor)}
+          disabled={
+            pending || uploading || autoState.status === "saving" || (!legacyBody && !editor)
+          }
           className={primaryButtonClass}
         >
           {submitLabel}
