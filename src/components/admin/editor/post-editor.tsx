@@ -1,6 +1,7 @@
 "use client";
 
 import { Extension, type Editor, type JSONContent } from "@tiptap/core";
+import type { Transaction } from "@tiptap/pm/state";
 import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -457,32 +458,46 @@ export function PostEditor({
   });
 
   /**
-   * 이미지를 하나씩 올리고 넣습니다. pos가 있으면(끌어 놓기) 그 자리에, 없으면 지금 커서 자리에 넣습니다.
-   * 넣을 수 없는 자리(콜아웃 안 등)면 알리고 멈춥니다. 이때 이미 올린 파일은 저장소에 남습니다.
+   * 이미지를 하나씩 올리고 넣습니다. pos가 있으면(끌어 놓기) 그 자리에, 없으면 시작할 때의 커서 자리에 넣습니다.
+   * 업로드 중에도 계속 쓸 수 있으므로, 시작 위치를 그 사이의 모든 문서 변경에 맞춰 옮겨(mapping) 끝난 뒤 그 자리에 넣습니다.
+   * 넣을 수 없는 자리(콜아웃 안 등)면 알리고 멈춥니다. 이때 이미 올린 파일은 저장소에 남습니다(ADR-0010).
    */
-  async function insertImages(files: File[], pos?: number) {
+  async function insertImages(files: File[], startPos?: number) {
     if (!editor) return;
-    for (const [index, file] of files.entries()) {
-      setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${files.length})`);
-      let attrs: Awaited<ReturnType<typeof uploadImage>>;
-      try {
-        attrs = await uploadImage(file);
-      } catch (error) {
-        setImageStatus(
-          error instanceof ImageUploadError ? error.message : "이미지를 올리지 못했습니다.",
-        );
-        return;
+    let pos = startPos ?? editor.state.selection.from;
+    const follow = ({ transaction }: { transaction: Transaction }) => {
+      pos = transaction.mapping.map(pos);
+    };
+    editor.on("transaction", follow);
+    try {
+      for (const [index, file] of files.entries()) {
+        setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${files.length})`);
+        let attrs: Awaited<ReturnType<typeof uploadImage>>;
+        try {
+          attrs = await uploadImage(file);
+        } catch (error) {
+          setImageStatus(
+            error instanceof ImageUploadError ? error.message : "이미지를 올리지 못했습니다.",
+          );
+          return;
+        }
+        const node = { type: "image", attrs: { ...attrs, alt: "", caption: "" } };
+        // 빈 문단(예: /이미지를 고른 자리)이면 그 문단을 이미지로 바꾸고, 아니면 그 위치에 넣습니다.
+        const $pos = editor.state.doc.resolve(pos);
+        const target =
+          $pos.parent.isTextblock && $pos.parent.content.size === 0 && $pos.depth > 0
+            ? { from: $pos.before(), to: $pos.after() }
+            : pos;
+        const before = editor.state.doc;
+        editor.chain().focus().insertContentAt(target, node).run();
+        // 콜아웃 안처럼 규칙에 어긋나는 자리는 에디터가 변경을 적용하지 않습니다(extensions.ts).
+        if (editor.state.doc === before) {
+          setImageStatus("이 자리에는 이미지를 넣을 수 없습니다. 콜아웃 밖에 넣어 주세요.");
+          return;
+        }
       }
-      const node = { type: "image", attrs: { ...attrs, alt: "", caption: "" } };
-      const chain = editor.chain().focus();
-      const inserted = (
-        pos === undefined ? chain.insertContent(node) : chain.insertContentAt(pos, node)
-      ).run();
-      if (!inserted) {
-        setImageStatus("이 자리에는 이미지를 넣을 수 없습니다. 콜아웃 밖에 넣어 주세요.");
-        return;
-      }
-      pos = undefined;
+    } finally {
+      editor.off("transaction", follow);
     }
     setImageStatus("이미지를 넣었습니다. 이미지 아래에 대체 텍스트를 입력하세요.");
   }
