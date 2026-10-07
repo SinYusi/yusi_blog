@@ -375,6 +375,8 @@ export function PostEditor({
   const slashKeyRef = useRef<(key: string) => boolean>(() => false);
   const insertImagesRef = useRef<(files: File[], pos?: number) => void>(() => {});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 진행 중인 업로드 묶음 수. 붙여넣기를 여러 번 하면 업로드가 겹치므로, 마지막 업로드가 끝날 때만 '끝남'을 알립니다.
+  const activeUploadsRef = useRef(0);
   const [imageStatus, setImageStatus] = useState<string | null>(null);
   const previewRequestRef = useRef(0);
   const [link, setLink] = useState<{ href: string } | null>(null);
@@ -472,7 +474,8 @@ export function PostEditor({
       pos = transaction.mapping.map(pos);
     };
     editor.on("transaction", follow);
-    onUploadingChange?.(true);
+    activeUploadsRef.current += 1;
+    if (activeUploadsRef.current === 1) onUploadingChange?.(true);
     try {
       for (const [index, file] of files.entries()) {
         setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${files.length})`);
@@ -493,7 +496,8 @@ export function PostEditor({
             ? { from: $pos.before(), to: $pos.after() }
             : pos;
         const before = editor.state.doc;
-        editor.chain().focus().insertContentAt(target, node).run();
+        // 업로드를 기다리는 동안 다른 칸(제목·캡션 등)을 쓰고 있을 수 있으므로 초점은 옮기지 않습니다.
+        editor.chain().insertContentAt(target, node).run();
         // 콜아웃 안처럼 규칙에 어긋나는 자리는 에디터가 변경을 적용하지 않습니다(extensions.ts).
         if (editor.state.doc === before) {
           setImageStatus("이 자리에는 이미지를 넣을 수 없습니다. 콜아웃 밖에 넣어 주세요.");
@@ -502,7 +506,8 @@ export function PostEditor({
       }
     } finally {
       editor.off("transaction", follow);
-      onUploadingChange?.(false);
+      activeUploadsRef.current -= 1;
+      if (activeUploadsRef.current === 0) onUploadingChange?.(false);
     }
     setImageStatus("이미지를 넣었습니다. 이미지 아래에 대체 텍스트를 입력하세요.");
   }
