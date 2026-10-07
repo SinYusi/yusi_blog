@@ -19,17 +19,33 @@ export class ImageUploadError extends Error {}
 /**
  * 파일 앞부분(매직 바이트)으로 실제 이미지 형식을 판별합니다. 브라우저가 알려 주는 type은 확장자로 정해지므로
  * (PNG 파일 이름이 .jpg면 image/jpeg), 업로드 형식·확장자는 항상 이 값을 씁니다.
- * JPEG(FF D8 FF), PNG(89 50 4E 47), WebP(RIFF....WEBP), AVIF(ftyp 상자의 브랜드에 avif·avis)만 알아봅니다.
+ * JPEG(FF D8 FF), PNG(89 50 4E 47), WebP(RIFF....WEBP), AVIF(ftyp 상자의 주·호환 브랜드에 avif·avis)만 알아봅니다.
  */
 async function sniffImageType(file: File): Promise<string | null> {
-  const b = new Uint8Array(await file.slice(0, 32).arrayBuffer());
+  const b = new Uint8Array(await file.slice(0, 12).arrayBuffer());
   const ascii = (from: number, to: number) => String.fromCharCode(...b.slice(from, to));
   if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
   if (b[0] === 0x89 && ascii(1, 4) === "PNG") return "image/png";
   if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
-  // AVIF는 주 브랜드가 mif1이고 호환 브랜드에 avif가 있는 경우도 있어 ftyp 상자 앞부분 전체에서 찾습니다.
-  if (ascii(4, 8) === "ftyp" && /avi[fs]/.test(ascii(8, 32))) return "image/avif";
+  if (ascii(4, 8) === "ftyp" && (await isAvifFtyp(file))) return "image/avif";
   return null;
+}
+
+/**
+ * ftyp 상자(크기 4바이트 + "ftyp" + 주 브랜드 + 부 버전 + 호환 브랜드 목록)에서 avif·avis 브랜드를 찾습니다.
+ * 브랜드 순서는 정해져 있지 않으므로(주 브랜드가 mif1인 파일도 있음) 상자 길이만큼 4바이트씩 모두 봅니다.
+ */
+async function isAvifFtyp(file: File) {
+  const head = new DataView(await file.slice(0, 4).arrayBuffer());
+  const size = Math.min(head.getUint32(0), 4096);
+  if (size < 16) return false;
+  const box = new Uint8Array(await file.slice(0, size).arrayBuffer());
+  const brand = (at: number) => String.fromCharCode(...box.slice(at, at + 4));
+  const brands = [
+    brand(8),
+    ...Array.from({ length: ((size - 16) / 4) | 0 }, (_, i) => brand(16 + i * 4)),
+  ];
+  return brands.some((b) => b === "avif" || b === "avis");
 }
 
 /** 저장소 경로로 쓸 파일 이름. 영문 소문자·숫자·.-_만 남깁니다(한글 이름은 image로). */

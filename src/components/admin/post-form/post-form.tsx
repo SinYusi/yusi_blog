@@ -686,6 +686,7 @@ export function PostForm({
             initialContent={initial.content}
             onEditorChange={setEditor}
             onUploadingChange={setUploading}
+            uploadsBlocked={pending}
             errorId={errors.content ? errorId("content") : undefined}
           />
         )}

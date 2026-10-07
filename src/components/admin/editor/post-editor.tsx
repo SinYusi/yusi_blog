@@ -382,6 +382,7 @@ export function PostEditor({
   initialContent,
   onEditorChange,
   onUploadingChange,
+  uploadsBlocked = false,
   errorId,
 }: {
   /** 편집할 글의 에디터 원본. 없으면 빈 문서로 시작합니다. */
@@ -390,6 +391,8 @@ export function PostEditor({
   onEditorChange?: (editor: Editor | null) => void;
   /** 이미지 업로드가 시작·끝날 때 알립니다. 업로드 중에 저장하면 이미지가 빠지므로 글 저장 폼이 저장을 막는 데 씁니다. */
   onUploadingChange?: (uploading: boolean) => void;
+  /** 글을 저장하는 중이면 true. 저장 요청은 이미 만든 본문만 보내므로, 그사이 넣은 이미지는 빠집니다. 그래서 막습니다. */
+  uploadsBlocked?: boolean;
   /** 본문 오류 메시지의 id. 있으면 본문 입력 영역을 aria-invalid로 표시하고 메시지와 연결합니다. */
   errorId?: string;
 } = {}) {
@@ -496,6 +499,12 @@ export function PostEditor({
    */
   async function insertImages(files: File[], startPos?: number) {
     if (!editor) return;
+    if (uploadsBlocked) {
+      setImageStatus(
+        "글을 저장하는 동안에는 이미지를 넣을 수 없습니다. 저장이 끝난 뒤 다시 넣어 주세요.",
+      );
+      return;
+    }
     const findImage = (uploadId: string) => {
       let found: { pos: number; attrs: Record<string, unknown> } | null = null;
       editor.state.doc.descendants((node, nodePos) => {

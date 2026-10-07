@@ -39,6 +39,7 @@ export function isAllowedImageSrc(src: unknown): src is string {
   return (
     url.protocol === "https:" &&
     url.hostname === blobPublicHost() &&
+    url.port === "" &&
     url.pathname.startsWith(`/${IMAGE_PATH_PREFIX}`) &&
     !url.search &&
     !url.hash
