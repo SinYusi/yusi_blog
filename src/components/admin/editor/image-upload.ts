@@ -16,9 +16,23 @@ export type UploadedImage = { src: string; width: number; height: number };
 
 export class ImageUploadError extends Error {}
 
+/**
+ * 파일 앞부분(매직 바이트)으로 이미지 형식을 판별합니다. 브라우저가 형식을 알려 주지 않은 파일(type이 빈 문자열)에 씁니다.
+ * JPEG(FF D8 FF), PNG(89 50 4E 47), WebP(RIFF....WEBP), AVIF(....ftypavif / ftypavis)만 알아봅니다.
+ */
+async function sniffImageType(file: File): Promise<string | null> {
+  const b = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const ascii = (from: number, to: number) => String.fromCharCode(...b.slice(from, to));
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b[0] === 0x89 && ascii(1, 4) === "PNG") return "image/png";
+  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
+  if (ascii(4, 8) === "ftyp" && ["avif", "avis"].includes(ascii(8, 12))) return "image/avif";
+  return null;
+}
+
 /** 저장소 경로로 쓸 파일 이름. 영문 소문자·숫자·.-_만 남깁니다(한글 이름은 image로). */
-function storageName(file: File) {
-  const ext = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
+function storageName(file: File, type: string) {
+  const ext = type === "image/jpeg" ? "jpg" : type.split("/")[1];
   const base = file.name
     .replace(/\.[^.]+$/, "")
     .toLowerCase()
@@ -29,7 +43,9 @@ function storageName(file: File) {
 }
 
 export async function uploadImage(file: File): Promise<UploadedImage> {
-  if (!IMAGE_CONTENT_TYPES.includes(file.type)) {
+  // 브라우저가 알려 준 형식이 없으면 파일 앞부분으로 판별해, 그 형식을 확장자·업로드 형식에 함께 씁니다.
+  const type = file.type || (await sniffImageType(file)) || "";
+  if (!IMAGE_CONTENT_TYPES.includes(type)) {
     throw new ImageUploadError("JPEG, PNG, WebP, AVIF 이미지만 올릴 수 있습니다.");
   }
   if (file.size > IMAGE_MAX_BYTES) {
@@ -55,10 +71,10 @@ export async function uploadImage(file: File): Promise<UploadedImage> {
   }
 
   try {
-    const blob = await upload(storageName(file), file, {
+    const blob = await upload(storageName(file, type), file, {
       access: "public",
       handleUploadUrl: "/api/admin/images",
-      contentType: file.type,
+      contentType: type,
     });
     return { src: blob.url, width, height };
   } catch (error) {

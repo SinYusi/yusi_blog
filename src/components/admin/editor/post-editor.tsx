@@ -13,7 +13,7 @@ import { serializeEditorDoc } from "@/lib/editor/transport";
 
 import { EditorSkeleton } from "./editor-skeleton";
 import { CalloutView, CodeBlockView, ImageView } from "./node-views";
-import { ImageUploadError, uploadImage } from "./image-upload";
+import { ImageUploadError, uploadImage, type UploadedImage } from "./image-upload";
 import { SlashMenu } from "./slash-menu";
 import {
   LINK_KEYS,
@@ -345,8 +345,30 @@ function Preview({ result, pending }: { result: PreviewResult | null; pending: b
   );
 }
 
+// 브라우저가 형식을 판별하지 못한 파일(type이 빈 문자열)도 받고, 실제 형식은 업로드 때 파일 앞부분으로 확인합니다.
 function imageFiles(list: FileList | undefined) {
-  return Array.from(list ?? []).filter((file) => file.type.startsWith("image/"));
+  return Array.from(list ?? []).filter(
+    (file) => file.type === "" || file.type.startsWith("image/"),
+  );
+}
+
+/**
+ * 끝난 업로드의 자리 표시를 실제 이미지로 바꾸거나(성공) 지웁니다(실패). 실행 취소 기록에는 넣지 않습니다.
+ * 기록에 넣으면 ⌘Z가 '자리 표시 → 실제 이미지' 교체만 되돌려 이미 폐기한 미리보기 주소로 돌아가므로,
+ * 실행 취소는 처음 이미지를 넣은 일 자체를 되돌리게 합니다. 업로드 중에 입력한 대체 텍스트·캡션은 유지합니다.
+ */
+function settleUploads(editor: Editor, results: Map<string, UploadedImage | null>) {
+  if (results.size === 0) return;
+  const { tr } = editor.state;
+  editor.state.doc.descendants((node, pos) => {
+    const id = node.type.name === "image" ? node.attrs.uploadId : null;
+    if (!id || !results.has(id)) return;
+    const result = results.get(id);
+    const at = tr.mapping.map(pos);
+    if (result) tr.setNodeMarkup(at, undefined, { ...node.attrs, ...result, uploadId: null });
+    else tr.delete(at, at + node.nodeSize);
+  });
+  if (tr.docChanged) editor.view.dispatch(tr.setMeta("addToHistory", false));
 }
 
 const editorAttributes = {
@@ -377,6 +399,8 @@ export function PostEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 진행 중인 업로드 묶음 수. 붙여넣기를 여러 번 하면 업로드가 겹치므로, 마지막 업로드가 끝날 때만 '끝남'을 알립니다.
   const activeUploadsRef = useRef(0);
+  // 끝난 업로드의 결과(uploadId → 실제 주소·크기, 실패면 null). 다시 실행으로 되살아난 자리 표시도 이 결과로 바꿉니다.
+  const uploadResultsRef = useRef(new Map<string, UploadedImage | null>());
   const [imageStatus, setImageStatus] = useState<string | null>(null);
   const previewRequestRef = useRef(0);
   const [link, setLink] = useState<{ href: string } | null>(null);
@@ -526,24 +550,10 @@ export function PostEditor({
           failed =
             error instanceof ImageUploadError ? error.message : "이미지를 올리지 못했습니다.";
         }
-        // 그사이 사용자가 지운 자리 표시는 건너뜁니다(올린 파일은 저장소에 남음, ADR-0010).
-        const placed = findImage(uploadId);
-        if (placed) {
-          const tr = editor.state.tr;
-          if (uploaded) {
-            // 업로드 중에 입력한 대체 텍스트·캡션은 그대로 둡니다.
-            tr.setNodeMarkup(placed.pos, undefined, {
-              ...placed.attrs,
-              ...uploaded,
-              uploadId: null,
-            });
-          } else {
-            tr.delete(placed.pos, placed.pos + (tr.doc.nodeAt(placed.pos)?.nodeSize ?? 1));
-          }
-          // 실행 취소 기록에 넣지 않습니다. 넣으면 ⌘Z가 '자리 표시 → 실제 이미지' 교체만 되돌려 이미 폐기한
-          // 미리보기 주소로 돌아갑니다. 실행 취소는 처음 이미지를 넣은 일 자체를 되돌립니다.
-          editor.view.dispatch(tr.setMeta("addToHistory", false));
-        }
+        // 결과를 기록하고 자리 표시를 바꿉니다. 그사이 지운 자리 표시는 건너뛰지만(올린 파일은 저장소에 남음, ADR-0010),
+        // 나중에 다시 실행(⌘⇧Z)으로 돌아와도 아래 'update' 처리기가 같은 결과로 바꿉니다.
+        uploadResultsRef.current.set(uploadId, uploaded);
+        settleUploads(editor, uploadResultsRef.current);
         URL.revokeObjectURL(preview);
       }
     } finally {
@@ -556,6 +566,17 @@ export function PostEditor({
   useEffect(() => {
     insertImagesRef.current = (files, pos) => void insertImages(files, pos);
   });
+
+  // 실행 취소·다시 실행으로 끝난 업로드의 자리 표시가 다시 나타나면 기록한 결과로 바로 바꿉니다.
+  useEffect(() => {
+    if (!editor) return;
+    const results = uploadResultsRef.current;
+    const settle = () => settleUploads(editor, results);
+    editor.on("update", settle);
+    return () => {
+      editor.off("update", settle);
+    };
+  }, [editor]);
 
   if (!editor) return <EditorSkeleton />;
 
