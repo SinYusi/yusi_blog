@@ -9,7 +9,7 @@
 
 # Workflow
 
-작업 흐름 전체는 docs/CONTRIBUTING.md를 따른다. 기본 브랜치는 `dev`이고, `main`은 릴리스 PR로만 변경한다. Claude가 맡는 범위는 이슈 생성부터 리뷰 반영까지이며, 머지는 사용자가 한다.
+작업 흐름 전체는 docs/CONTRIBUTING.md를 따른다. 기본 브랜치는 `dev`이고, `main`은 릴리스 PR과 긴급 수정(hotfix) PR로만 변경한다. Claude가 맡는 범위는 이슈 생성부터 리뷰 반영까지이며, 머지는 사용자가 한다.
 
 1. `gh issue create`로 이슈를 만든다. 본문은 .github/ISSUE_TEMPLATE에서 작업 종류에 맞는 템플릿의 필수 항목을 따르고(버그는 현상, 재현 방법, 기대 동작), 템플릿의 라벨과 로드맵 단계 마일스톤을 붙인다.
 2. 최신 `dev`에서 `<type>/<이슈번호>-<짧은-설명>` 브랜치를 만든다.
