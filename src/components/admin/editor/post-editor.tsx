@@ -162,6 +162,13 @@ function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
   );
 }
 
+/** 선택 영역(빈 선택이면 커서 자리)에 인라인 코드 서식이 있는지 */
+function hasInlineCode(editor: Editor) {
+  const { from, to, empty } = editor.state.selection;
+  const code = editor.schema.marks.code;
+  return empty ? editor.isActive("code") : editor.state.doc.rangeHasMark(from, to, code);
+}
+
 /**
  * 직접 입력한 주소 정리. 프로토콜 없는 외부 주소(example.com/path)는 https://를 붙입니다.
  * defaultProtocol은 자동 링크·붙여넣기에만 적용되어, 그대로 두면 공개 페이지에서 상대 경로로 해석되기 때문입니다.
@@ -212,8 +219,17 @@ function LinkForm({
 
     // 두 적용 경로 모두 문서를 바꾸기 전에 허용 정책(link-policy.ts, Link 확장과 같은 규칙)을 먼저 통과해야 합니다.
     // javascript:, data: 같은 주소를 그대로 적용하면 렌더링 때 href가 지워져, 알리지 않고 깨진 링크가 됩니다.
-    if (!isAllowedLinkHref(value) || !editor.can().setLink({ href: value })) {
-      setError("쓸 수 없는 주소입니다. http(s), mailto, 상대 경로, #앵커를 쓸 수 있습니다.");
+    // 주소 규칙 위반과 '이 자리에 링크를 걸 수 없음'을 나눠, 원인과 해결 방법을 알려 줍니다(#54).
+    const reason = !isAllowedLinkHref(value)
+      ? "쓸 수 없는 주소입니다. http(s), mailto, 상대 경로, #앵커를 쓸 수 있습니다."
+      : editor.can().setLink({ href: value })
+        ? null
+        : // 인라인 코드 서식은 링크를 포함한 다른 서식과 함께 쓸 수 없습니다(Tiptap code 마크의 excludes: "_").
+          hasInlineCode(editor)
+          ? `인라인 코드에는 링크를 걸 수 없습니다. 코드 서식(${shortcutLabel(["E"])})을 끈 뒤 걸어 주세요.`
+          : "이 자리에는 링크를 걸 수 없습니다.";
+    if (reason) {
+      setError(reason);
       inputRef.current?.focus();
       return;
     }
