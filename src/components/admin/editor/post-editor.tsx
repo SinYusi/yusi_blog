@@ -220,13 +220,14 @@ function LinkForm({
     // 두 적용 경로 모두 문서를 바꾸기 전에 허용 정책(link-policy.ts, Link 확장과 같은 규칙)을 먼저 통과해야 합니다.
     // javascript:, data: 같은 주소를 그대로 적용하면 렌더링 때 href가 지워져, 알리지 않고 깨진 링크가 됩니다.
     // 주소 규칙 위반과 '이 자리에 링크를 걸 수 없음'을 나눠, 원인과 해결 방법을 알려 줍니다(#54).
+    // 인라인 코드 서식은 링크를 포함한 다른 서식과 함께 쓸 수 없습니다(Tiptap code 마크의 excludes: "_").
+    // 선택에 일반 글자가 섞여 있으면 can()은 통과하지만 코드 부분만 조용히 빠지므로, 코드 여부를 먼저 봅니다.
     const reason = !isAllowedLinkHref(value)
       ? "쓸 수 없는 주소입니다. http(s), mailto, 상대 경로, #앵커를 쓸 수 있습니다."
-      : editor.can().setLink({ href: value })
-        ? null
-        : // 인라인 코드 서식은 링크를 포함한 다른 서식과 함께 쓸 수 없습니다(Tiptap code 마크의 excludes: "_").
-          hasInlineCode(editor)
-          ? `인라인 코드에는 링크를 걸 수 없습니다. 코드 서식(${shortcutLabel(["E"])})을 끈 뒤 걸어 주세요.`
+      : hasInlineCode(editor)
+        ? `인라인 코드에는 링크를 걸 수 없습니다. 코드 서식(${shortcutLabel(["E"])})을 끈 뒤 걸어 주세요.`
+        : editor.can().setLink({ href: value })
+          ? null
           : "이 자리에는 링크를 걸 수 없습니다.";
     if (reason) {
       setError(reason);
