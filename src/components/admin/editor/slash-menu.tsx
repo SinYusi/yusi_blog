@@ -27,6 +27,14 @@ type SlashItem = {
 
 const ITEMS: SlashItem[] = [
   {
+    // 파일 선택 창을 엽니다(SlashMenu의 onImage). 선택한 이미지는 지금 문단 자리에 들어갑니다.
+    id: "image",
+    label: "이미지",
+    keywords: "image img picture photo 사진",
+    run: (c) => c,
+    node: "image",
+  },
+  {
     id: "h2",
     label: "소제목 2",
     keywords: "h2 heading",
@@ -118,8 +126,11 @@ export const SLASH_MENU_ID = "editor-slash-menu";
 export function SlashMenu({
   editor,
   keyRef,
+  onImage,
 }: {
   editor: Editor;
+  /** "이미지" 항목을 고르면 부릅니다. 파일 선택 창을 여는 일은 에디터가 맡습니다. */
+  onImage: () => void;
   /** 에디터 키 처리기에 넘겨줄 함수. 메뉴가 키를 처리했으면 true를 돌려줍니다. */
   keyRef: RefObject<(key: string) => boolean>;
 }) {
@@ -150,6 +161,7 @@ export function SlashMenu({
   function choose(item: SlashItem) {
     if (!slash) return;
     item.run(editor.chain().focus().deleteRange({ from: slash.from, to: slash.to })).run();
+    if (item.id === "image") onImage();
   }
 
   useEffect(() => {

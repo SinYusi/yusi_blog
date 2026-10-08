@@ -24,6 +24,7 @@ async function NewPostForm() {
         publishMode: "draft",
         scheduledAt: "",
         content: null,
+        updatedAt: null,
       }}
       options={options}
       legacyBody={false}

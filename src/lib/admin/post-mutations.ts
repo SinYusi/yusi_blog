@@ -22,12 +22,26 @@ import {
  */
 
 /** 저장할 본문. null이면 기존 본문을 그대로 둡니다(에디터 원본이 없는 글). empty는 실제 내용이 없는 문서인지입니다. */
-export type PostContent = { json: unknown; html: string; empty: boolean } | null;
+export type PostContent = {
+  json: unknown;
+  html: string;
+  empty: boolean;
+  missingAlt: number;
+} | null;
 
 export type SavePostResult =
-  | { ok: true; id: number; slug: string; changed: boolean }
+  | {
+      ok: true;
+      id: number;
+      slug: string;
+      changed: boolean;
+      updatedAt: Date;
+      /** 저장 전후 모두 초안이면 false. 공개 페이지에 영향이 없어 캐시를 무효화하지 않아도 됩니다. */
+      affectsPublic: boolean;
+    }
   | { ok: false; errors: FieldErrors; message?: string }
-  | { ok: false; notFound: true };
+  | { ok: false; notFound: true }
+  | { ok: false; conflict: true };
 
 type ExistingPost = {
   id: number;
@@ -40,6 +54,7 @@ type ExistingPost = {
   publishedAt: Date | null;
   seriesId: number | null;
   seriesOrder: number | null;
+  updatedAt: Date;
 };
 
 /** 트랜잭션 안에서 필드 오류를 만나면 던져서 롤백합니다. */
@@ -88,6 +103,7 @@ async function findExisting(tx: Transaction, id: number): Promise<ExistingPost |
       publishedAt: posts.publishedAt,
       seriesId: posts.seriesId,
       seriesOrder: posts.seriesOrder,
+      updatedAt: posts.updatedAt,
     })
     .from(posts)
     .where(eq(posts.id, id))
@@ -190,17 +206,22 @@ function sameIds(a: number[], b: number[]) {
 
 /**
  * 글 생성(id = null) 또는 수정. 바뀐 것이 없으면 아무것도 쓰지 않습니다.
+ * 수정은 화면이 불러온 updated_at(baseUpdatedAt)이 잠근 행의 값과 같을 때만 씁니다. 다르면 다른 탭이나 자동 저장이
+ * 먼저 저장한 것이므로 덮어쓰지 않고 conflict를 돌려줍니다(낙관적 동시성 제어, ADR-0014).
  * updated_at은 글 행의 값뿐 아니라 태그·시리즈 연결이 바뀔 때도 갱신합니다 (sitemap·RSS·JSON-LD의 수정 시각).
  */
 export async function savePost({
   id,
   input,
   content,
+  baseUpdatedAt,
   now = new Date(),
 }: {
   id: number | null;
   input: PostInput;
   content: PostContent;
+  /** 수정할 때 화면이 마지막으로 받은 updated_at. 새 글이면 null */
+  baseUpdatedAt: Date | null;
   now?: Date;
 }): Promise<SavePostResult> {
   await requireAdmin();
@@ -209,6 +230,10 @@ export async function savePost({
     return await withTransaction(async (tx): Promise<SavePostResult> => {
       const existing = id === null ? null : await findExisting(tx, id);
       if (id !== null && !existing) return { ok: false, notFound: true };
+      // 행을 잠근 뒤 비교하므로, 두 탭이 같은 updated_at으로 동시에 저장해도 뒤의 요청은 앞의 저장 결과와 비교됩니다.
+      if (existing && existing.updatedAt.getTime() !== baseUpdatedAt?.getTime()) {
+        return { ok: false, conflict: true };
+      }
 
       await checkConflicts(tx, input, id);
 
@@ -229,11 +254,18 @@ export async function savePost({
         existing,
         now,
       );
+      const affectsPublic = !((existing?.status ?? "draft") === "draft" && status === "draft");
       const contentHtml = content ? content.html : (existing?.contentHtml ?? "");
       // 새 본문은 문서로 판단하고(빈 목록·인용만 있는 문서도 비었다고 봄), 기존 본문을 유지하면 저장된 HTML로 판단합니다.
       const bodyEmpty = content ? content.empty : !contentHtml.trim();
       if (status !== "draft" && bodyEmpty) {
         throw new FieldValidationError({ content: "발행하거나 예약하려면 본문을 입력하세요." });
+      }
+      // 대체 텍스트가 없는 이미지는 화면 낭독기 사용자에게 내용이 전달되지 않으므로 공개 전에 막습니다(초안은 허용).
+      if (status !== "draft" && content && content.missingAlt > 0) {
+        throw new FieldValidationError({
+          content: `대체 텍스트가 없는 이미지가 ${content.missingAlt}개 있습니다. 발행하거나 예약하려면 모든 이미지에 대체 텍스트를 입력하세요.`,
+        });
       }
 
       const tagIds = await resolveTagIds(tx, input.tags);
@@ -252,11 +284,18 @@ export async function savePost({
         const [created] = await tx
           .insert(posts)
           .values({ ...values, contentHtml })
-          .returning({ id: posts.id });
+          .returning({ id: posts.id, updatedAt: posts.updatedAt });
         if (tagIds.length > 0) {
           await tx.insert(postTags).values(tagIds.map((tagId) => ({ postId: created.id, tagId })));
         }
-        return { ok: true, id: created.id, slug: input.slug, changed: true };
+        return {
+          ok: true,
+          id: created.id,
+          slug: input.slug,
+          changed: true,
+          updatedAt: created.updatedAt,
+          affectsPublic,
+        };
       }
 
       const currentTagIds = (
@@ -277,7 +316,16 @@ export async function savePost({
         !sameTime(existing.publishedAt, values.publishedAt) ||
         existing.seriesId !== values.seriesId ||
         existing.seriesOrder !== values.seriesOrder;
-      if (!changed) return { ok: true, id: existing.id, slug: existing.slug, changed: false };
+      if (!changed) {
+        return {
+          ok: true,
+          id: existing.id,
+          slug: existing.slug,
+          changed: false,
+          updatedAt: existing.updatedAt,
+          affectsPublic: false,
+        };
+      }
 
       // 태그만 바뀌어도 글의 수정 시각을 갱신합니다. 스키마의 $onUpdate에 기대지 않고 명시합니다.
       await tx
@@ -307,7 +355,14 @@ export async function savePost({
         await tx.delete(postSlugRedirects).where(eq(postSlugRedirects.oldSlug, input.slug));
       }
 
-      return { ok: true, id: existing.id, slug: input.slug, changed: true };
+      return {
+        ok: true,
+        id: existing.id,
+        slug: input.slug,
+        changed: true,
+        updatedAt: now,
+        affectsPublic,
+      };
     });
   } catch (error) {
     if (error instanceof FieldValidationError) return { ok: false, errors: error.errors };

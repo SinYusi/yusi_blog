@@ -15,6 +15,12 @@ import {
   hasInvalidCalloutContent,
   isCalloutType,
 } from "@/lib/editor/extensions";
+import {
+  IMAGE_ALT_MAX,
+  IMAGE_CAPTION_MAX,
+  isAllowedImageSrc,
+  isImageDimension,
+} from "@/lib/editor/image-policy";
 import { MAX_EDITOR_JSON_BYTES } from "@/lib/editor/transport";
 
 /*
@@ -95,6 +101,10 @@ function isBlank(node: ProseMirrorNode) {
   return blank;
 }
 
+function escapeHtml(text: string) {
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -147,6 +157,21 @@ function parseEditorDoc(json: unknown) {
         );
       }
     }
+    if (node.type.name === "image") {
+      const { src, alt, width, height, caption } = node.attrs;
+      if (!isAllowedImageSrc(src)) {
+        throw new InvalidEditorContentError("이미지는 블로그 저장소에 올린 주소만 쓸 수 있습니다.");
+      }
+      if (!isImageDimension(width) || !isImageDimension(height)) {
+        throw new InvalidEditorContentError("이미지 크기 정보가 올바르지 않습니다.");
+      }
+      if (typeof alt !== "string" || alt.length > IMAGE_ALT_MAX) {
+        throw new InvalidEditorContentError(`대체 텍스트는 ${IMAGE_ALT_MAX}자 이하여야 합니다.`);
+      }
+      if (typeof caption !== "string" || caption.length > IMAGE_CAPTION_MAX) {
+        throw new InvalidEditorContentError(`캡션은 ${IMAGE_CAPTION_MAX}자 이하여야 합니다.`);
+      }
+    }
     if (node.type.name === "callout") {
       if (!isCalloutType(node.attrs.type)) {
         throw new InvalidEditorContentError(`지원하지 않는 콜아웃 종류입니다: ${node.attrs.type}`);
@@ -192,9 +217,24 @@ export function prepareEditorContent(json: unknown): {
   json: unknown;
   html: string;
   empty: boolean;
+  /** 대체 텍스트가 비어 있는 이미지 수. 발행·예약은 이 값이 0이어야 합니다. */
+  missingAlt: number;
 } {
   const doc = parseEditorDoc(json);
-  return { json: doc.toJSON(), html: renderDocToHtml(doc), empty: !hasContent(doc) };
+  return {
+    json: doc.toJSON(),
+    html: renderDocToHtml(doc),
+    empty: !hasContent(doc),
+    missingAlt: countMissingAlt(doc),
+  };
+}
+
+function countMissingAlt(doc: ProseMirrorNode) {
+  let count = 0;
+  doc.descendants((node) => {
+    if (node.type.name === "image" && !String(node.attrs.alt).trim()) count += 1;
+  });
+  return count;
 }
 
 /**
@@ -240,6 +280,16 @@ function renderDocToHtml(doc: ProseMirrorNode) {
             "data-filename": node.attrs.filename?.trim() || null,
           });
           return `<pre${attrs}><code>${serializeChildrenToHTMLString(children)}</code></pre>`;
+        },
+        // 이미지는 figure로 감싸고, 캡션이 있으면 figcaption을 붙입니다. 공개 페이지는 렌더링 단계(render.ts)에서
+        // 최적화 주소(srcset)로 바꿉니다. width·height는 자리를 미리 잡는 데 씁니다.
+        image: ({ node }) => {
+          const { src, width, height, caption } = node.attrs;
+          const img = `<img${serializeAttrsToHTMLString({ src, alt: String(node.attrs.alt).trim(), width, height })}>`;
+          const figcaption = String(caption).trim()
+            ? `<figcaption>${escapeHtml(String(caption).trim())}</figcaption>`
+            : "";
+          return `<figure>${img}${figcaption}</figure>`;
         },
         callout: ({ node, children }) => {
           if (!node.textContent.trim()) return "";

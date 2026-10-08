@@ -78,7 +78,10 @@ async function EditPost({ params, searchParams }: PageProps<"/admin/posts/[id]">
               ? toKstDateTimeLocal(post.publishedAt)
               : "",
           content: isEditorDoc(post.content) ? post.content : null,
+          updatedAt: post.updatedAt.toISOString(),
         }}
+        // 공개·예약 글은 쓰는 도중의 내용이 바로 공개되므로 자동 저장하지 않습니다(ADR-0014).
+        autosave={post.state === "draft"}
         options={options}
         legacyBody={legacyBody}
         publicSlug={isPublic ? post.slug : null}
