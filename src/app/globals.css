@@ -336,6 +336,27 @@
     border-bottom: 0;
   }
 
+  /* 본문 이미지: width·height 속성으로 비율을 잡고 본문 너비에 맞춤. 캡션은 아래 가운데 */
+  .prose-article :where(figure:has(> img)) {
+    margin-inline: 0;
+  }
+
+  .prose-article :where(figure > img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+  }
+
+  .prose-article :where(figure:has(> img) > figcaption) {
+    margin-top: --spacing(2);
+    color: var(--muted);
+    font-size: var(--text-caption);
+    text-align: center;
+  }
+
   /* 콜아웃: 종류는 강조 문구의 색으로 구분 */
   .prose-article :where(aside[data-callout]) {
     padding: --spacing(4) --spacing(5);

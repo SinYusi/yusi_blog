@@ -1,16 +1,19 @@
 "use client";
 
 import { Extension, type Editor, type JSONContent } from "@tiptap/core";
+import { TextSelection } from "@tiptap/pm/state";
 import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { previewPost, type PreviewResult } from "@/app/admin/(panel)/posts/actions";
 import { createEditorExtensions } from "@/lib/editor/extensions";
 import { isAllowedLinkHref } from "@/lib/editor/link-policy";
+import { IMAGE_CONTENT_TYPES } from "@/lib/editor/image-policy";
 import { serializeEditorDoc } from "@/lib/editor/transport";
 
 import { EditorSkeleton } from "./editor-skeleton";
-import { CalloutView, CodeBlockView } from "./node-views";
+import { CalloutView, CodeBlockView, ImageView } from "./node-views";
+import { ImageUploadError, uploadImage, type UploadedImage } from "./image-upload";
 import { SlashMenu } from "./slash-menu";
 import {
   LINK_KEYS,
@@ -342,6 +345,32 @@ function Preview({ result, pending }: { result: PreviewResult | null; pending: b
   );
 }
 
+// 브라우저가 형식을 판별하지 못한 파일(type이 빈 문자열)도 받고, 실제 형식은 업로드 때 파일 앞부분으로 확인합니다.
+function imageFiles(list: FileList | undefined) {
+  return Array.from(list ?? []).filter(
+    (file) => file.type === "" || file.type.startsWith("image/"),
+  );
+}
+
+/**
+ * 끝난 업로드의 자리 표시를 실제 이미지로 바꾸거나(성공) 지웁니다(실패). 실행 취소 기록에는 넣지 않습니다.
+ * 기록에 넣으면 ⌘Z가 '자리 표시 → 실제 이미지' 교체만 되돌려 이미 폐기한 미리보기 주소로 돌아가므로,
+ * 실행 취소는 처음 이미지를 넣은 일 자체를 되돌리게 합니다. 업로드 중에 입력한 대체 텍스트·캡션은 유지합니다.
+ */
+function settleUploads(editor: Editor, results: Map<string, UploadedImage | null>) {
+  if (results.size === 0) return;
+  const { tr } = editor.state;
+  editor.state.doc.descendants((node, pos) => {
+    const id = node.type.name === "image" ? node.attrs.uploadId : null;
+    if (!id || !results.has(id)) return;
+    const result = results.get(id);
+    const at = tr.mapping.map(pos);
+    if (result) tr.setNodeMarkup(at, undefined, { ...node.attrs, ...result, uploadId: null });
+    else tr.delete(at, at + node.nodeSize);
+  });
+  if (tr.docChanged) editor.view.dispatch(tr.setMeta("addToHistory", false));
+}
+
 const editorAttributes = {
   role: "textbox",
   "aria-multiline": "true",
@@ -352,17 +381,34 @@ const editorAttributes = {
 export function PostEditor({
   initialContent,
   onEditorChange,
+  onUploadingChange,
+  uploadsBlocked = false,
   errorId,
 }: {
   /** 편집할 글의 에디터 원본. 없으면 빈 문서로 시작합니다. */
   initialContent?: JSONContent | null;
   /** 에디터가 만들어지거나 사라질 때 알립니다. 글 저장 폼이 저장할 때 editor.getJSON()을 읽는 데 씁니다. */
   onEditorChange?: (editor: Editor | null) => void;
+  /** 이미지 업로드가 시작·끝날 때 알립니다. 업로드 중에 저장하면 이미지가 빠지므로 글 저장 폼이 저장을 막는 데 씁니다. */
+  onUploadingChange?: (uploading: boolean) => void;
+  /** 글을 저장하는 중이면 true. 저장 요청은 이미 만든 본문만 보내므로, 그사이 넣은 이미지는 빠집니다. 그래서 막습니다. */
+  uploadsBlocked?: boolean;
   /** 본문 오류 메시지의 id. 있으면 본문 입력 영역을 aria-invalid로 표시하고 메시지와 연결합니다. */
   errorId?: string;
 } = {}) {
   const openLinkRef = useRef<() => void>(() => {});
   const slashKeyRef = useRef<(key: string) => boolean>(() => false);
+  const insertImagesRef = useRef<(files: File[], pos?: number) => void>(() => {});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // 진행 중인 업로드 묶음 수. 붙여넣기를 여러 번 하면 업로드가 겹치므로, 마지막 업로드가 끝날 때만 '끝남'을 알립니다.
+  const activeUploadsRef = useRef(0);
+  // 업로드 중에는 본문에 미리보기 주소(blob:)인 자리 표시가 있어 서버 미리보기가 실패하므로 미리보기를 막습니다.
+  const [uploading, setUploading] = useState(false);
+  // 겹친 업로드들의 실패 사유를 모았다가 마지막 업로드가 끝날 때 한꺼번에 알립니다(나중 성공이 앞의 실패를 덮지 않게).
+  const uploadFailuresRef = useRef<string[]>([]);
+  // 끝난 업로드의 결과(uploadId → 실제 주소·크기, 실패면 null). 다시 실행으로 되살아난 자리 표시도 이 결과로 바꿉니다.
+  const uploadResultsRef = useRef(new Map<string, UploadedImage | null>());
+  const [imageStatus, setImageStatus] = useState<string | null>(null);
   const previewRequestRef = useRef(0);
   const [link, setLink] = useState<{ href: string } | null>(null);
   const [mode, setMode] = useState<"write" | "preview">("write");
@@ -376,6 +422,7 @@ export function PostEditor({
       ...createEditorExtensions({
         codeBlock: ReactNodeViewRenderer(CodeBlockView),
         callout: ReactNodeViewRenderer(CalloutView),
+        image: ReactNodeViewRenderer(ImageView),
       }),
       // 링크 단축키(Mod-k)는 Tiptap 기본값에 없어 직접 더합니다. 주소 입력 창을 엽니다.
       Extension.create({
@@ -411,6 +458,24 @@ export function PostEditor({
       attributes: errorId
         ? { ...editorAttributes, "aria-invalid": "true", "aria-describedby": errorId }
         : editorAttributes,
+      // 이미지 파일을 붙여넣거나 끌어 놓으면 저장소에 올린 뒤 그 자리에 넣습니다(글자·HTML 붙여넣기는 그대로).
+      handlePaste: (_view, event) => {
+        const files = imageFiles(event.clipboardData?.files);
+        if (files.length === 0) return false;
+        event.preventDefault();
+        insertImagesRef.current(files);
+        return true;
+      },
+      handleDrop: (view, event, _slice, moved) => {
+        const files = imageFiles(event.dataTransfer?.files);
+        if (moved || files.length === 0) return false;
+        event.preventDefault();
+        insertImagesRef.current(
+          files,
+          view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos,
+        );
+        return true;
+      },
     },
   });
 
@@ -427,6 +492,116 @@ export function PostEditor({
   useEffect(() => {
     openLinkRef.current = openLinkForm;
   });
+
+  /**
+   * 이미지 넣기. 붙여넣거나 끌어 놓는 순간 자리 표시(미리보기 주소 + uploadId)를 그 자리에 넣고,
+   * 하나씩 업로드가 끝나면 그 노드를 찾아 실제 주소·크기로 바꿉니다. 자리를 먼저 차지하므로 업로드 중에
+   * 글을 더 쓰거나 다른 이미지를 겹쳐 넣어도 붙여넣은 순서와 위치가 그대로 유지됩니다.
+   * 넣을 수 없는 자리(콜아웃 안 등)면 올리지 않고 알립니다. 업로드에 실패한 이미지는 자리 표시를 지웁니다.
+   */
+  async function insertImages(files: File[], startPos?: number) {
+    if (!editor) return;
+    if (uploadsBlocked) {
+      setImageStatus(
+        "글을 저장하는 동안에는 이미지를 넣을 수 없습니다. 저장이 끝난 뒤 다시 넣어 주세요.",
+      );
+      return;
+    }
+    const findImage = (uploadId: string) => {
+      let found: { pos: number; attrs: Record<string, unknown> } | null = null;
+      editor.state.doc.descendants((node, nodePos) => {
+        if (found) return false;
+        if (node.type.name === "image" && node.attrs.uploadId === uploadId) {
+          found = { pos: nodePos, attrs: node.attrs };
+        }
+      });
+      return found as { pos: number; attrs: Record<string, unknown> } | null;
+    };
+
+    // 1. 자리 표시를 순서대로 넣습니다. 다음 이미지는 바로 앞 이미지 뒤에 들어갑니다.
+    let pos = startPos ?? editor.state.selection.from;
+    const pending: { file: File; uploadId: string; preview: string }[] = [];
+    for (const file of files) {
+      const uploadId = crypto.randomUUID();
+      const preview = URL.createObjectURL(file);
+      const node = { type: "image", attrs: { src: preview, uploadId, alt: "", caption: "" } };
+      // 빈 문단(예: /이미지를 고른 자리)이면 그 문단을 이미지로 바꾸고, 아니면 그 위치에 넣습니다.
+      const $pos = editor.state.doc.resolve(Math.min(pos, editor.state.doc.content.size));
+      const target =
+        $pos.parent.isTextblock && $pos.parent.content.size === 0 && $pos.depth > 0
+          ? { from: $pos.before(), to: $pos.after() }
+          : $pos.pos;
+      editor.chain().insertContentAt(target, node, { updateSelection: false }).run();
+      const placed = findImage(uploadId);
+      if (!placed) {
+        // 콜아웃 안처럼 규칙에 어긋나는 자리는 에디터가 변경을 적용하지 않습니다(extensions.ts).
+        URL.revokeObjectURL(preview);
+        setImageStatus("이 자리에는 이미지를 넣을 수 없습니다. 콜아웃 밖에 넣어 주세요.");
+        break;
+      }
+      pos = placed.pos + (editor.state.doc.nodeAt(placed.pos)?.nodeSize ?? 1);
+      pending.push({ file, uploadId, preview });
+    }
+    if (pending.length === 0) return;
+    // 보통 붙여넣기처럼 커서를 마지막 이미지 뒤(다음 문단 처음)로 옮겨, 이어 쓰거나 다시 붙여넣으면 그 뒤에 들어가게 합니다.
+    // 초점은 옮기지 않고, 업로드가 끝나 노드를 바꿀 때도 커서·초점을 건드리지 않습니다.
+    editor.view.dispatch(
+      editor.state.tr.setSelection(TextSelection.near(editor.state.doc.resolve(pos))),
+    );
+
+    // 2. 하나씩 올리고 자리 표시를 바꿉니다. 업로드가 겹치면 마지막이 끝날 때만 '끝남'을 알립니다.
+    activeUploadsRef.current += 1;
+    if (activeUploadsRef.current === 1) {
+      setUploading(true);
+      onUploadingChange?.(true);
+    }
+    try {
+      for (const [index, { file, uploadId, preview }] of pending.entries()) {
+        setImageStatus(`이미지를 올리는 중입니다 (${index + 1}/${pending.length})`);
+        let uploaded: Awaited<ReturnType<typeof uploadImage>> | null = null;
+        try {
+          uploaded = await uploadImage(file);
+        } catch (error) {
+          uploadFailuresRef.current.push(
+            error instanceof ImageUploadError ? error.message : "이미지를 올리지 못했습니다.",
+          );
+        }
+        // 결과를 기록하고 자리 표시를 바꿉니다. 그사이 지운 자리 표시는 건너뛰지만(올린 파일은 저장소에 남음, ADR-0010),
+        // 나중에 다시 실행(⌘⇧Z)으로 돌아와도 아래 'update' 처리기가 같은 결과로 바꿉니다.
+        uploadResultsRef.current.set(uploadId, uploaded);
+        settleUploads(editor, uploadResultsRef.current);
+        URL.revokeObjectURL(preview);
+      }
+    } finally {
+      activeUploadsRef.current -= 1;
+      if (activeUploadsRef.current === 0) {
+        setUploading(false);
+        onUploadingChange?.(false);
+        const failures = uploadFailuresRef.current;
+        uploadFailuresRef.current = [];
+        setImageStatus(
+          failures.length > 0
+            ? `이미지 ${failures.length}개를 올리지 못해 본문에서 뺐습니다. ${failures[0]}`
+            : "이미지를 넣었습니다. 이미지 아래에 대체 텍스트를 입력하세요.",
+        );
+      }
+    }
+  }
+
+  useEffect(() => {
+    insertImagesRef.current = (files, pos) => void insertImages(files, pos);
+  });
+
+  // 실행 취소·다시 실행으로 끝난 업로드의 자리 표시가 다시 나타나면 기록한 결과로 바로 바꿉니다.
+  useEffect(() => {
+    if (!editor) return;
+    const results = uploadResultsRef.current;
+    const settle = () => settleUploads(editor, results);
+    editor.on("update", settle);
+    return () => {
+      editor.off("update", settle);
+    };
+  }, [editor]);
 
   if (!editor) return <EditorSkeleton />;
 
@@ -471,9 +646,10 @@ export function PostEditor({
           type="button"
           aria-pressed={mode === "preview"}
           onClick={() => showPreview(editor)}
-          className={modeButtonClass}
+          disabled={uploading}
+          className={`${modeButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
         >
-          미리보기
+          {uploading ? "미리보기 (이미지 올리는 중)" : "미리보기"}
         </button>
       </div>
 
@@ -482,10 +658,29 @@ export function PostEditor({
         {link && <LinkForm editor={editor} initialHref={link.href} onClose={() => setLink(null)} />}
         <div className="relative rounded-xl border border-border-strong bg-surface focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-hover">
           <EditorContent editor={editor} />
-          <SlashMenu editor={editor} keyRef={slashKeyRef} />
+          <SlashMenu
+            editor={editor}
+            keyRef={slashKeyRef}
+            onImage={() => fileInputRef.current?.click()}
+          />
         </div>
         <p className="font-mono text-caption text-muted">
-          {`블록 넣기 / · 굵게 ${shortcutLabel(["B"])} · 기울임 ${shortcutLabel(["I"])} · 코드 ${shortcutLabel(["E"])} · 링크 ${shortcutLabel(LINK_KEYS)} · 줄바꿈 Shift+Enter`}
+          {`블록 넣기 / · 이미지 붙여넣기·끌어 놓기 · 굵게 ${shortcutLabel(["B"])} · 기울임 ${shortcutLabel(["I"])} · 코드 ${shortcutLabel(["E"])} · 링크 ${shortcutLabel(LINK_KEYS)} · 줄바꿈 Shift+Enter`}
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={IMAGE_CONTENT_TYPES.join(",")}
+          multiple
+          hidden
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            event.target.value = "";
+            if (files.length > 0) void insertImages(files);
+          }}
+        />
+        <p role="status" className="text-meta text-muted">
+          {imageStatus}
         </p>
       </div>
 

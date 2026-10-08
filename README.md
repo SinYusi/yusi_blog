@@ -42,6 +42,7 @@ pnpm dev
 ```
 
 - `.env.local`에는 운영이 아닌 Neon `dev` 브랜치의 연결 문자열만 둡니다. Vercel의 Development 환경 변수는 운영 DB를 가리킬 수 있으므로 `vercel env pull`은 쓰지 않습니다.
+- 본문 이미지(관리자 에디터 업로드, 공개 페이지 표시)를 로컬에서 쓰려면 **개발용** Vercel Blob 저장소를 따로 만들고, 그 저장소의 `BLOB_STORE_ID`와 `BLOB_READ_WRITE_TOKEN`을 `.env.local`에 넣습니다(`.env.example` 참고, [ADR-0010](docs/adr/0010-image-storage.md)). 운영 저장소 값을 넣으면 로컬에서 올린 시험 이미지가 운영 저장소에 쌓입니다.
 - DB 스키마를 바꾸는 방법은 [작업 흐름](docs/CONTRIBUTING.md#db-스키마-변경)을 참고합니다.
 
 [http://localhost:3000](http://localhost:3000)에서 확인할 수 있습니다.
