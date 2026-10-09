@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 import { blobPublicHost } from "./src/lib/editor/image-policy";
+import { SITEMAP_PATH } from "./src/lib/site";
 
 const blobHost = blobPublicHost();
 
@@ -17,6 +18,10 @@ const nextConfig: NextConfig = {
         ]
       : [],
     qualities: [75],
+  },
+  // sitemap 경로를 바꿨으므로(#59) 이전 주소로 오는 검색 엔진을 새 주소로 보냅니다.
+  async redirects() {
+    return [{ source: "/sitemap.xml", destination: SITEMAP_PATH, permanent: true }];
   },
 };
 

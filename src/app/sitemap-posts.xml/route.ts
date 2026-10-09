@@ -3,8 +3,8 @@ import { absoluteUrl, escapeXml, postPath } from "@/lib/site";
 
 /*
  * 공개 글과 목록 페이지의 sitemap. 모든 데이터는 캐시된 공개 글 목록 한 번의 조회에서 나옵니다.
- * 메타데이터 라우트(sitemap.ts) 대신 RSS와 같은 일반 Route Handler로 둡니다. 운영(Vercel)에서
- * sitemap.ts의 정적 결과가 updateTag('posts')로 무효화되지 않고 남았기 때문입니다(#59).
+ * 운영(Vercel)에서 /sitemap.xml 경로의 정적 결과는 메타데이터 라우트(sitemap.ts)든 Route Handler든
+ * updateTag('posts')로 무효화되지 않고 남아(#59), RSS와 같은 Route Handler를 다른 경로(SITEMAP_PATH)에 둡니다.
  * 데이터 조회가 'use cache'로 캐시되므로 빌드 시 정적 응답으로 생성되고, 글을 저장하면 RSS와 함께 갱신됩니다.
  */
 export async function GET() {
