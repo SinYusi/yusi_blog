@@ -1,20 +1,18 @@
 import { getLatestPosts, latestModifiedAt } from "@/lib/content/posts";
-import { FEED_PATH, SITE_DESCRIPTION, SITE_NAME, absoluteUrl, postPath } from "@/lib/site";
+import {
+  FEED_PATH,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  absoluteUrl,
+  escapeXml,
+  postPath,
+} from "@/lib/site";
 
 /*
  * RSS 2.0 피드. 최근 공개 글의 요약을 담고 본문은 사이트에서 읽도록 링크합니다.
  * 데이터 조회가 'use cache'로 캐시되므로 빌드 시 정적 응답으로 생성됩니다.
  */
 const FEED_ITEM_COUNT = 20;
-
-function escapeXml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
 
 export async function GET() {
   const posts = await getLatestPosts(FEED_ITEM_COUNT);
