@@ -36,6 +36,16 @@ export function postPath(slug: string) {
   return `/posts/${slug}`;
 }
 
+/** XML 문자열·속성 값 이스케이프 (RSS, sitemap) */
+export function escapeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 /*
  * 하위 페이지의 openGraph는 상위 레이아웃 값과 합쳐지지 않고 통째로 바뀌므로,
  * 페이지마다 이 헬퍼로 제목·설명·canonical·Open Graph를 함께 만듭니다.
