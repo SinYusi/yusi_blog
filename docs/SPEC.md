@@ -119,7 +119,7 @@ src/
     (site)/         공개 블로그 라우트 (공개 머리글·바닥글 레이아웃)
     admin/          관리자 CMS 라우트 (login, (panel): 사이드바 레이아웃)
     api/auth/       Auth.js 라우트
-    feed.xml/       RSS (Route Handler), sitemap.xml/ (Route Handler), robots.ts
+    feed.xml/       RSS (Route Handler), sitemap-posts.xml/ (Route Handler, /sitemap.xml에서 이동), robots.ts
     globals.css     디자인 토큰 (@theme)
   auth.ts           Auth.js 설정 (ADR-0009)
   proxy.ts          /admin 앞단 세션 확인

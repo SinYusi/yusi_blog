@@ -9,6 +9,8 @@ export const SITE_NAME = "yusi_blog";
 export const SITE_DESCRIPTION = "만들면서 부딪힌 문제를 커밋처럼 기록하는 프론트엔드 로그";
 export const SITE_AUTHOR = { name: "yusi", url: "https://github.com/SinYusi" };
 export const FEED_PATH = "/feed.xml";
+// /sitemap.xml은 운영(Vercel)에서 저장해도 갱신되지 않아 다른 이름을 씁니다(#59). 이전 주소는 next.config.ts에서 이리로 보냅니다.
+export const SITEMAP_PATH = "/sitemap-posts.xml";
 
 function resolveSiteUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
