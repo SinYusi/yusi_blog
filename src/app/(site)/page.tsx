@@ -3,8 +3,8 @@ import Link from "next/link";
 
 import { FeaturedPost } from "@/components/posts/featured-post";
 import { PostRow } from "@/components/posts/post-row";
-import { getLatestPosts, getSeriesSummaries, getTagSummaries } from "@/lib/content/posts";
-import { pageMetadata } from "@/lib/site";
+import { getLatestPosts, getPublicSeries, getTagSummaries } from "@/lib/content/posts";
+import { pageMetadata, seriesPath, tagPath } from "@/lib/site";
 
 const HOME_POST_COUNT = 6;
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = pageMetadata({ path: "/" });
 export default async function Home() {
   const [latest, seriesList, tagList] = await Promise.all([
     getLatestPosts(HOME_POST_COUNT),
-    getSeriesSummaries(),
+    getPublicSeries(),
     getTagSummaries(),
   ]);
   const [featured, ...rest] = latest;
@@ -63,11 +63,18 @@ export default async function Home() {
                   >
                     {"// series"}
                   </h2>
-                  <ul className="flex flex-col gap-3 text-body">
+                  <ul className="-my-2 flex flex-col text-body">
                     {seriesList.map((s) => (
-                      <li key={s.slug}>
-                        {s.name}{" "}
-                        <span className="font-mono text-caption text-muted">{s.postCount}편</span>
+                      <li key={s.slug} className="flex items-center gap-1.5">
+                        <Link
+                          href={seriesPath(s.slug)}
+                          className="inline-flex min-h-11 min-w-11 items-center hover:text-accent-hover"
+                        >
+                          {s.name}
+                        </Link>{" "}
+                        <span className="font-mono text-caption text-muted">
+                          {s.posts.length}편
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -80,11 +87,13 @@ export default async function Home() {
                   </h2>
                   <ul className="flex flex-wrap gap-2 font-mono text-caption">
                     {tagList.map((tag) => (
-                      <li
-                        key={tag.slug}
-                        className="rounded-md border border-border bg-surface px-3 py-1"
-                      >
-                        #{tag.name} <span className="text-muted">{tag.postCount}</span>
+                      <li key={tag.slug}>
+                        <Link
+                          href={tagPath(tag.slug)}
+                          className="inline-flex min-h-11 min-w-11 items-center rounded-md border border-border bg-surface px-3 py-1 hover:border-border-strong hover:text-accent-hover"
+                        >
+                          #{tag.name}&nbsp;<span className="text-muted">{tag.postCount}</span>
+                        </Link>
                       </li>
                     ))}
                   </ul>
