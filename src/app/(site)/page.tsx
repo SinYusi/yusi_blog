@@ -68,7 +68,7 @@ export default async function Home() {
                       <li key={s.slug} className="flex items-center gap-1.5">
                         <Link
                           href={seriesPath(s.slug)}
-                          className="inline-flex min-h-11 items-center hover:text-accent-hover"
+                          className="inline-flex min-h-11 min-w-11 items-center hover:text-accent-hover"
                         >
                           {s.name}
                         </Link>{" "}
@@ -90,7 +90,7 @@ export default async function Home() {
                       <li key={tag.slug}>
                         <Link
                           href={tagPath(tag.slug)}
-                          className="inline-flex min-h-11 items-center rounded-md border border-border bg-surface px-3 py-1 hover:border-border-strong hover:text-accent-hover"
+                          className="inline-flex min-h-11 min-w-11 items-center rounded-md border border-border bg-surface px-3 py-1 hover:border-border-strong hover:text-accent-hover"
                         >
                           #{tag.name}&nbsp;<span className="text-muted">{tag.postCount}</span>
                         </Link>
