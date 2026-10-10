@@ -91,6 +91,9 @@ describe("validatePostInput", () => {
     );
     assert.ok(result.ok);
     assert.deepEqual(result.value.tags, ["Next.js", "코드 리뷰"]);
+    const split = validatePostInput(raw({ tags: ["React, 성능, 리팩토링", "react,"] }), NOW);
+    assert.ok(split.ok);
+    assert.deepEqual(split.value.tags, ["React", "성능", "리팩토링"]);
 
     assert.ok(errorsOf({ tags: Array.from({ length: 11 }, (_, i) => `t${i}`) }).tags);
     assert.equal(errorsOf({ tags: Array.from({ length: 10 }, (_, i) => `t${i}`) }).tags, undefined);

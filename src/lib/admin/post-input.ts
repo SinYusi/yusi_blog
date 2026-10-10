@@ -171,8 +171,9 @@ export function validatePostInput(
 
   const tags: string[] = [];
   const seenTags = new Set<string>();
-  for (const value of raw.tags) {
-    const name = normalizeTagName(text(value));
+  // 쉼표는 태그 구분자입니다. 붙여 넣거나 입력 중에 저장해 한 값에 여러 태그가 와도 나눕니다(#66).
+  for (const value of raw.tags.flatMap((tag) => text(tag).split(","))) {
+    const name = normalizeTagName(value);
     if (!name) continue;
     if (name.length > TAG_NAME_MAX) {
       errors.tags = `태그 이름은 ${TAG_NAME_MAX}자 이하로 입력하세요: ${name}`;
