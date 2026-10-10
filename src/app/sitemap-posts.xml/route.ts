@@ -28,15 +28,14 @@ export async function GET() {
       url: absoluteUrl(postPath(post.slug)),
       lastModified: post.modifiedAt,
     })),
-    // 태그·시리즈 페이지의 내용은 글이 그 태그·시리즈에서 빠질 때도 바뀌는데, 빠진 시각은 남지 않습니다.
-    // 남은 글의 시각으로는 과거로 돌아갈 수 있어 목록은 전체 글 기준으로 두고, 상세는 수정 시각을 넣지 않습니다.
-    { url: absoluteUrl("/tags"), lastModified: latestModifiedAt(all) },
-    ...[...tagSlugs].map((slug) => ({ url: absoluteUrl(tagPath(slug)), lastModified: undefined })),
-    { url: absoluteUrl("/series"), lastModified: latestModifiedAt(all) },
-    ...seriesList.map((series) => ({
-      url: absoluteUrl(seriesPath(series.slug)),
-      lastModified: undefined,
-    })),
+    // 태그·시리즈 페이지는 글이 그 태그·시리즈에서 빠지거나 비공개가 될 때도 바뀌는데, 그 시각은 남지 않습니다.
+    // 남은 글의 시각으로는 과거로 돌아갈 수 있어 수정 시각(lastmod)을 넣지 않습니다.
+    ...[
+      "/tags",
+      ...[...tagSlugs].map(tagPath),
+      "/series",
+      ...seriesList.map((s) => seriesPath(s.slug)),
+    ].map((path) => ({ url: absoluteUrl(path), lastModified: undefined })),
   ];
 
   const xml = [
