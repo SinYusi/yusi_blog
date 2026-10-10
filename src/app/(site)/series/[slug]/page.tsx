@@ -38,8 +38,8 @@ export default async function SeriesPage({ params }: PageProps<"/series/[slug]">
   return (
     <>
       <section className="flex flex-col gap-4 border-b border-border pt-11 pb-8 md:pt-14 lg:pt-16">
-        <nav aria-label="현재 위치" className="font-mono text-meta text-muted">
-          <Link href="/series" className="hover:text-fg">
+        <nav aria-label="현재 위치" className="-my-3 font-mono text-meta text-muted">
+          <Link href="/series" className="inline-flex min-h-11 min-w-11 items-center hover:text-fg">
             series
           </Link>{" "}
           / {series.name}
@@ -54,7 +54,10 @@ export default async function SeriesPage({ params }: PageProps<"/series/[slug]">
       {/* 순번 원과 세로선으로 읽는 순서를 보여 줍니다. 마지막 글에는 선을 잇지 않습니다. */}
       <ol className="max-w-article pt-8 pb-16 md:pt-10">
         {series.posts.map((post, i) => (
-          <li key={post.slug} className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-4 md:gap-x-5">
+          <li
+            key={post.slug}
+            className="relative grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-4 md:gap-x-5"
+          >
             <div className="flex flex-col items-center">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-accent font-mono text-meta font-bold text-accent">
                 {post.order}
@@ -72,7 +75,11 @@ export default async function SeriesPage({ params }: PageProps<"/series/[slug]">
                 {formatDate(post.publishedAt)}
               </time>
               <h2 className="text-h3">
-                <Link href={postPath(post.slug)} className="hover:text-accent-hover">
+                {/* 항목 전체를 누를 수 있게 하되, 링크의 이름은 제목만 되도록 가상 요소로 영역을 넓힙니다. */}
+                <Link
+                  href={postPath(post.slug)}
+                  className="after:absolute after:inset-0 hover:text-accent-hover"
+                >
                   {post.title}
                 </Link>
               </h2>

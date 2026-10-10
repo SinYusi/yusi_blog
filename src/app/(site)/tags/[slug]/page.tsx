@@ -34,8 +34,8 @@ export default async function TagPage({ params }: PageProps<"/tags/[slug]">) {
   return (
     <>
       <section className="flex flex-col gap-4 pt-11 pb-8 md:pt-14 lg:pt-16">
-        <nav aria-label="현재 위치" className="font-mono text-meta text-muted">
-          <Link href="/tags" className="hover:text-fg">
+        <nav aria-label="현재 위치" className="-my-3 font-mono text-meta text-muted">
+          <Link href="/tags" className="inline-flex min-h-11 min-w-11 items-center hover:text-fg">
             tags
           </Link>{" "}
           / {tag.name}

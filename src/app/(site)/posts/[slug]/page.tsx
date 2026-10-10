@@ -93,11 +93,11 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
       <article className="min-w-0 lg:col-span-8">
         <header className="border-b border-border pb-6 md:pb-8">
           {post.series && (
-            <p className="mb-4 font-mono text-caption text-muted md:text-meta">
+            <p className="-mt-3 mb-1 font-mono text-caption text-muted md:text-meta">
               series /{" "}
               <Link
                 href={seriesPath(post.series.slug)}
-                className="text-accent hover:text-accent-hover"
+                className="inline-flex min-h-11 items-center text-accent hover:text-accent-hover"
               >
                 {post.series.name}
               </Link>{" "}
