@@ -14,14 +14,7 @@ export async function GET() {
   );
   const all = [first, ...pages].flatMap((page) => page.items);
   const seriesList = await getPublicSeries();
-
-  // 태그 페이지의 수정 시각은 그 태그가 붙은 글 중 가장 늦은 수정 시각입니다.
-  const tagPosts = Map.groupBy(
-    all.flatMap((post) =>
-      post.tags.map((tag) => ({ slug: tag.slug, modifiedAt: post.modifiedAt })),
-    ),
-    (item) => item.slug,
-  );
+  const tagSlugs = new Set(all.flatMap((post) => post.tags.map((tag) => tag.slug)));
 
   const entries = [
     // 홈은 최근 글뿐 아니라 전체 공개 글로 센 시리즈·태그 글 수도 보여 주므로 전체 기준입니다.
@@ -35,18 +28,14 @@ export async function GET() {
       url: absoluteUrl(postPath(post.slug)),
       lastModified: post.modifiedAt,
     })),
+    // 태그·시리즈 페이지의 내용은 글이 그 태그·시리즈에서 빠질 때도 바뀌는데, 빠진 시각은 남지 않습니다.
+    // 남은 글의 시각으로는 과거로 돌아갈 수 있어 목록은 전체 글 기준으로 두고, 상세는 수정 시각을 넣지 않습니다.
     { url: absoluteUrl("/tags"), lastModified: latestModifiedAt(all) },
-    ...[...tagPosts].map(([slug, items]) => ({
-      url: absoluteUrl(tagPath(slug)),
-      lastModified: latestModifiedAt(items),
-    })),
-    {
-      url: absoluteUrl("/series"),
-      lastModified: latestModifiedAt(seriesList.flatMap((series) => series.posts)),
-    },
+    ...[...tagSlugs].map((slug) => ({ url: absoluteUrl(tagPath(slug)), lastModified: undefined })),
+    { url: absoluteUrl("/series"), lastModified: latestModifiedAt(all) },
     ...seriesList.map((series) => ({
       url: absoluteUrl(seriesPath(series.slug)),
-      lastModified: latestModifiedAt(series.posts),
+      lastModified: undefined,
     })),
   ];
 

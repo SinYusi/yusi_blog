@@ -181,8 +181,8 @@ function latestOf(a: Date, b: Date) {
   return a > b ? a : b;
 }
 
-/** 목록에 담긴 글 중 가장 늦은 수정 시각 (sitemap의 목록·태그·시리즈 lastModified, RSS lastBuildDate) */
-export function latestModifiedAt(items: { modifiedAt: Date }[]) {
+/** 목록에 담긴 글 중 가장 늦은 수정 시각 (sitemap의 목록 lastModified, RSS lastBuildDate) */
+export function latestModifiedAt(items: PostListItem[]) {
   return items.reduce<Date | undefined>(
     (latest, post) => (latest ? latestOf(latest, post.modifiedAt) : post.modifiedAt),
     undefined,
