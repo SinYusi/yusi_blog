@@ -266,6 +266,18 @@ export function PostForm({
   }
 
   /** 폼 값으로 저장 요청을 만듭니다. 에디터가 아직 없으면 null입니다. */
+  /**
+   * 칩을 서버와 같은 검증 결과(쉼표 분리, 중복 제거)로 맞춥니다. 쉼표가 든 기존 태그(#66 이전 데이터)도 저장하면
+   * 서버처럼 나뉘어, 화면과 서버의 태그 수가 같아집니다. 기존 태그는 저장된 이름으로 보여 줍니다.
+   */
+  function syncTags(names: string[]) {
+    setTags(
+      names.map(
+        (name) => options.tags.find((tag) => tag.toLowerCase() === name.toLowerCase()) ?? name,
+      ),
+    );
+  }
+
   function buildFormData(form: HTMLFormElement, tagNames: string[]) {
     const formData = new FormData(form);
     for (const tag of tagNames) formData.append("tags", tag);
@@ -319,6 +331,8 @@ export function PostForm({
       return;
     }
     if (state === autosaveErrorRef.current) setLocalState(null);
+    // 요청을 보내기 전에 맞추므로, 저장하는 동안 새로 붙인 칩을 덮지 않습니다.
+    syncTags(checked.value.tags);
 
     const version = changeVersionRef.current;
     setAutoState({ status: "saving" });
@@ -385,12 +399,8 @@ export function PostForm({
       return;
     }
 
-    // 함께 저장하는 입력 중 태그를 칩으로 옮깁니다. 남겨 두면 다음 저장에서 빠져 연결이 지워집니다.
-    const draftName = normalizeTagName(tagDraft);
-    if (draftName && !tags.some((tag) => tag.toLowerCase() === draftName.toLowerCase())) {
-      const existing = options.tags.find((tag) => tag.toLowerCase() === draftName.toLowerCase());
-      setTags([...tags, existing ?? draftName]);
-    }
+    // 함께 저장한 입력 중 태그도 칩으로 옮겨, 다음 저장에서 빠져 연결이 지워지지 않게 합니다.
+    syncTags(checked.value.tags);
     setTagDraft("");
 
     setLocalState(null);
