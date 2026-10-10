@@ -4,7 +4,7 @@ import { and, asc, count, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { getDb } from "@/db";
-import { posts, postSlugRedirects, postTags, series, tags } from "@/db/schema";
+import { posts, postSlugRedirects, postTags, tags } from "@/db/schema";
 
 import { renderPostHtml, type TocItem } from "./render";
 
@@ -79,23 +79,72 @@ export async function getPostsPage(page: number) {
   };
 }
 
-/** 공개된 글이 하나 이상 있는 시리즈. 공개 글 수와 최근 발행일을 함께 반환합니다. */
-export async function getSeriesSummaries() {
+export type SeriesPost = {
+  slug: string;
+  title: string;
+  summary: string;
+  publishedAt: Date;
+  modifiedAt: Date;
+  /** 시리즈 안에서의 순번. 글 상세의 "N편"과 같은 저장값입니다. */
+  order: number;
+};
+
+export type PublicSeries = {
+  slug: string;
+  name: string;
+  description: string;
+  /** 공개된 글만, 순번 순서 */
+  posts: SeriesPost[];
+};
+
+/**
+ * 공개된 글이 하나 이상 있는 시리즈와 그 공개 글. 최근 발행한 글이 있는 시리즈부터 반환합니다.
+ * 홈 사이드바, 시리즈 목록·상세, sitemap이 함께 씁니다.
+ */
+export async function getPublicSeries(): Promise<PublicSeries[]> {
   "use cache";
   cacheLife("hours");
   cacheTag(CONTENT_CACHE_TAG);
 
-  return getDb()
-    .select({
-      slug: series.slug,
-      name: series.name,
-      postCount: count(posts.id),
-      latestAt: sql<Date>`max(${posts.publishedAt})`.mapWith(posts.publishedAt),
-    })
-    .from(series)
-    .innerJoin(posts, and(eq(posts.seriesId, series.id), isPublic))
-    .groupBy(series.id)
-    .orderBy(desc(sql`max(${posts.publishedAt})`));
+  const rows = await getDb().query.series.findMany({
+    columns: { slug: true, name: true, description: true },
+    with: {
+      posts: {
+        where: isPublic,
+        orderBy: [asc(posts.seriesOrder), asc(posts.id)],
+        columns: {
+          slug: true,
+          title: true,
+          summary: true,
+          publishedAt: true,
+          updatedAt: true,
+          seriesOrder: true,
+        },
+      },
+    },
+  });
+
+  return rows
+    .filter((row) => row.posts.length > 0)
+    .map((row) => ({
+      ...row,
+      posts: row.posts.map(({ publishedAt, updatedAt, seriesOrder, ...post }) => ({
+        ...post,
+        // isPublic 조건상 발행 시각이 있고, 시리즈에 속한 글은 순번이 있습니다(DB 제약).
+        publishedAt: publishedAt!,
+        modifiedAt: latestOf(publishedAt!, updatedAt),
+        order: seriesOrder!,
+      })),
+    }))
+    .sort((a, b) => latestPublishedAt(b).getTime() - latestPublishedAt(a).getTime());
+}
+
+/** 시리즈에서 가장 최근에 발행한 글의 발행 시각 */
+export function latestPublishedAt(series: PublicSeries) {
+  return series.posts.reduce(
+    (latest, post) => (post.publishedAt > latest ? post.publishedAt : latest),
+    series.posts[0].publishedAt,
+  );
 }
 
 /** 공개된 글에 쓰인 태그와 공개 글 수 (초안·예약 글은 세지 않음) */
@@ -113,6 +162,15 @@ export async function getTagSummaries() {
     .orderBy(desc(count(posts.id)), tags.name);
 }
 
+/** 태그가 붙은 공개 글. 공개 글이 없는 태그는 null입니다. 목록 조회 결과를 재사용합니다. */
+export async function getTagPosts(slug: string) {
+  const items = (await getPublicPostList()).filter((post) =>
+    post.tags.some((tag) => tag.slug === slug),
+  );
+  const tag = items[0]?.tags.find((item) => item.slug === slug);
+  return tag ? { tag, items } : null;
+}
+
 /** 정적 생성할 공개 글의 slug 목록 */
 export async function getPublicPostSlugs() {
   // 목록 조회 결과를 재사용해 빌드 쿼리를 늘리지 않습니다.
@@ -123,8 +181,8 @@ function latestOf(a: Date, b: Date) {
   return a > b ? a : b;
 }
 
-/** 목록에 담긴 글 중 가장 늦은 수정 시각 (sitemap의 목록 lastModified, RSS lastBuildDate) */
-export function latestModifiedAt(items: PostListItem[]) {
+/** 목록에 담긴 글 중 가장 늦은 수정 시각 (sitemap의 목록·태그·시리즈 lastModified, RSS lastBuildDate) */
+export function latestModifiedAt(items: { modifiedAt: Date }[]) {
   return items.reduce<Date | undefined>(
     (latest, post) => (latest ? latestOf(latest, post.modifiedAt) : post.modifiedAt),
     undefined,

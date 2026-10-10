@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 
 import { CodeCopy } from "@/components/post/code-copy";
@@ -12,7 +13,14 @@ import {
   type PostDetail,
 } from "@/lib/content/posts";
 import { formatDate } from "@/lib/format";
-import { SITE_AUTHOR, SITE_NAME, absoluteUrl, pageMetadata, postPath } from "@/lib/site";
+import {
+  SITE_AUTHOR,
+  SITE_NAME,
+  absoluteUrl,
+  pageMetadata,
+  postPath,
+  seriesPath,
+} from "@/lib/site";
 
 /*
  * 공개된 글을 빌드 시 모두 정적 생성합니다. Cache Components 모드에서는 최소 하나를 반환해야 하므로,
@@ -86,8 +94,14 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
         <header className="border-b border-border pb-6 md:pb-8">
           {post.series && (
             <p className="mb-4 font-mono text-caption text-muted md:text-meta">
-              series / <span className="text-accent">{post.series.name}</span> · {post.series.order}
-              편
+              series /{" "}
+              <Link
+                href={seriesPath(post.series.slug)}
+                className="text-accent hover:text-accent-hover"
+              >
+                {post.series.name}
+              </Link>{" "}
+              · {post.series.order}편
             </p>
           )}
           <h1 className="mb-5 text-h1">{post.title}</h1>
