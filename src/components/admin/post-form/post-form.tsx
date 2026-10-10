@@ -385,15 +385,13 @@ export function PostForm({
       return;
     }
 
-    // 함께 저장하는 입력 중 태그를 칩으로 옮깁니다. 남겨 두면 다음 저장에서 빠져 연결이 지워집니다.
-    // 서버처럼 쉼표마다 나눠, 저장된 태그와 칩이 하나씩 맞게 합니다.
-    const next = [...tags];
-    for (const part of tagDraft.split(",")) {
-      const name = normalizeTagName(part);
-      if (!name || next.some((tag) => tag.toLowerCase() === name.toLowerCase())) continue;
-      next.push(options.tags.find((tag) => tag.toLowerCase() === name.toLowerCase()) ?? name);
-    }
-    if (next.length > tags.length) setTags(next);
+    // 칩을 서버와 같은 검증 결과(쉼표 분리, 중복 제거)로 맞춥니다. 함께 저장한 입력 중 태그도 칩으로 옮겨,
+    // 다음 저장에서 빠져 연결이 지워지지 않게 합니다. 기존 태그는 저장된 이름으로 보여 줍니다.
+    setTags(
+      checked.value.tags.map(
+        (name) => options.tags.find((tag) => tag.toLowerCase() === name.toLowerCase()) ?? name,
+      ),
+    );
     setTagDraft("");
 
     setLocalState(null);
