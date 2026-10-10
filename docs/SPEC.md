@@ -103,11 +103,7 @@ tags                 unique(lower(name)) 추가: 대소문자만 다른 태그 �
 - 발행 설정은 초안(`draft`, 발행 시각 없음) / 발행(`published`, 이미 공개된 글은 처음 발행 시각 유지, 아니면 저장 시각) / 예약(`scheduled`, 입력한 한국 시간, 지금보다 뒤)이다. 발행·예약하려면 본문이 있어야 한다.
 - 바뀐 것이 없으면 저장하지 않는다. 태그·시리즈 연결만 바뀌어도 `updated_at`을 갱신한다.
 
-**2단계 (예정)**
-
-```
-users        id, github_id, name, avatar_url, role
-```
+관리자 계정은 테이블 없이 JWT 세션과 허용 GitHub ID(`ADMIN_GITHUB_ID`)로 확인한다([ADR-0009](adr/0009-admin-auth.md)). 처음 계획한 `users` 테이블은 두지 않는다.
 
 본문 이미지는 별도 테이블 없이 에디터 원본(`posts.content`)의 이미지 노드에 주소·원본 크기·대체 텍스트·캡션을 둔다. 파일은 Vercel Blob에 있다([ADR-0010](adr/0010-image-storage.md)).
 
