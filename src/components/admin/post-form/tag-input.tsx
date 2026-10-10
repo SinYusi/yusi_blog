@@ -36,28 +36,37 @@ export function TagInput({
   function add(value = draft) {
     const next = [...tags];
     const rest: string[] = [];
-    let message = "";
+    const added: string[] = [];
+    // 붙여 넣은 여러 이름의 결과를 한 번에 알립니다. 뒤의 성공이 앞의 실패 안내를 덮지 않게 모읍니다.
+    const problems = new Set<string>();
     for (const part of value.split(",")) {
       const name = normalizeTagName(part);
       if (!name) continue;
       if (next.some((tag) => tag.toLowerCase() === name.toLowerCase())) {
-        message = `"${name}" 태그는 이미 있습니다.`;
+        problems.add(`"${name}" 태그는 이미 있습니다.`);
       } else if (name.length > TAG_NAME_MAX) {
-        message = `태그 이름은 ${TAG_NAME_MAX}자 이하로 입력하세요.`;
+        problems.add(`태그 이름은 ${TAG_NAME_MAX}자 이하로 입력하세요.`);
         rest.push(name);
       } else if (next.length >= TAGS_MAX) {
-        message = `태그는 ${TAGS_MAX}개까지 붙일 수 있습니다.`;
+        problems.add(`태그는 ${TAGS_MAX}개까지 붙일 수 있습니다.`);
         rest.push(name);
       } else {
         // 대소문자만 다른 기존 태그가 있으면 그 이름으로 붙입니다(서버도 같은 태그로 연결합니다).
         const existing = suggestions.find((tag) => tag.toLowerCase() === name.toLowerCase());
         next.push(existing ?? name);
-        message = `"${existing ?? name}" 태그를 추가했습니다.`;
+        added.push(existing ?? name);
       }
     }
-    if (!message) return;
+    if (added.length === 0 && problems.size === 0) return;
     onTagsChange(next);
-    setNotice(message);
+    setNotice(
+      [
+        added.length > 0 && `${added.map((name) => `"${name}"`).join(", ")} 태그를 추가했습니다.`,
+        ...problems,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
     onDraftChange(rest.join(", "));
   }
 
