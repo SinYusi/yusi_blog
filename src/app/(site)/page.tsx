@@ -63,10 +63,13 @@ export default async function Home() {
                   >
                     {"// series"}
                   </h2>
-                  <ul className="flex flex-col gap-3 text-body">
+                  <ul className="-my-2 flex flex-col text-body">
                     {seriesList.map((s) => (
-                      <li key={s.slug}>
-                        <Link href={seriesPath(s.slug)} className="hover:text-accent-hover">
+                      <li key={s.slug} className="flex items-center gap-1.5">
+                        <Link
+                          href={seriesPath(s.slug)}
+                          className="inline-flex min-h-11 items-center hover:text-accent-hover"
+                        >
                           {s.name}
                         </Link>{" "}
                         <span className="font-mono text-caption text-muted">
