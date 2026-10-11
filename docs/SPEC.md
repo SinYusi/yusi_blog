@@ -116,6 +116,7 @@ src/
     admin/          관리자 CMS 라우트 (login, (panel): 사이드바 레이아웃)
     api/auth/       Auth.js 라우트
     feed.xml/       RSS (Route Handler), sitemap-posts.xml/ (Route Handler, /sitemap.xml에서 이동), robots.ts
+    og.png/         사이트 공용 Open Graph 이미지 (Route Handler). 글마다 이미지는 (site)/posts/[slug]/opengraph-image
     globals.css     디자인 토큰 (@theme)
   auth.ts           Auth.js 설정 (ADR-0009)
   proxy.ts          /admin 앞단 세션 확인
@@ -131,6 +132,7 @@ src/
     admin/          관리자 데이터 조회·저장 (requireAdmin 확인), 글 입력 검증
     auth/           관리자 확인 (requireAdmin)
 scripts/            마이그레이션, 시드, DB 확인, 색 대비 검사
+assets/fonts/       Open Graph 이미지용 한글 폰트 (IBM Plex Sans KR Bold TTF, OFL)
 drizzle/            SQL 마이그레이션
 docs/               스펙, 로드맵, ADR
 ```
