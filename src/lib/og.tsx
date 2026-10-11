@@ -16,6 +16,10 @@ import { SITE_NAME, SITE_OG_IMAGE } from "./site";
 export const OG_SIZE = { width: SITE_OG_IMAGE.width, height: SITE_OG_IMAGE.height };
 export const OG_CONTENT_TYPE = "image/png";
 
+// 간격은 사이트와 같은 4px 단위(globals.css의 --spacing, Tailwind 기본 0.25rem)의 배수로 둡니다.
+const SPACING_PX = 4;
+const sp = (n: number) => n * SPACING_PX;
+
 /**
  * 다크 테마(기본) 색 토큰. 값의 단일 소스인 globals.css의 [data-theme="dark"] 블록을 읽습니다
  * (scripts/check-contrast.mjs와 같은 규칙). ImageResponse는 CSS 변수를 읽지 못해 값을 꺼내 씁니다.
@@ -74,7 +78,7 @@ export async function renderOgImage({
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        padding: "64px 72px",
+        padding: `${sp(16)}px ${sp(18)}px`,
         background: COLOR.bg,
         color: COLOR.fg,
         fontFamily: "IBM Plex Sans KR",
@@ -83,7 +87,7 @@ export async function renderOgImage({
       <div style={{ display: "flex", alignItems: "center", flexShrink: 0, fontSize: 30 }}>
         <span style={{ color: COLOR.accent }}>~/</span>
         {SITE_NAME}
-        <span style={{ width: 14, height: 30, marginLeft: 10, background: COLOR.accent }} />
+        <span style={{ width: 14, height: 30, marginLeft: sp(2), background: COLOR.accent }} />
       </div>
 
       {/* 긴 글자는 줄 수를 제한하고 말줄임합니다(lineClamp는 display: block에서만 적용). 남는 높이는 가운데 정렬합니다. */}
@@ -93,11 +97,11 @@ export async function renderOgImage({
           flexDirection: "column",
           justifyContent: "center",
           flexGrow: 1,
-          gap: 24,
+          gap: sp(6),
           overflow: "hidden",
         }}
       >
-        <div style={{ display: "flex", gap: 14, fontSize: 26, color: COLOR.muted }}>
+        <div style={{ display: "flex", gap: sp(3), fontSize: 26, color: COLOR.muted }}>
           <span style={{ flexShrink: 0, color: COLOR.accent }}>$</span>
           <div style={{ display: "block", lineClamp: 1 }}>{eyebrow}</div>
         </div>
@@ -122,8 +126,8 @@ export async function renderOgImage({
           style={{
             display: "flex",
             flexShrink: 0,
-            gap: 24,
-            paddingTop: 28,
+            gap: sp(6),
+            paddingTop: sp(7),
             borderTop: `2px solid ${COLOR.border}`,
             fontSize: 26,
           }}
