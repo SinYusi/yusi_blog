@@ -38,6 +38,26 @@ export function postPath(slug: string) {
   return `/posts/${slug}`;
 }
 
+/**
+ * 동적 경로의 slug 값. 한글 slug(태그)는 페이지에는 퍼센트 인코딩된 채로, generateMetadata에는 디코딩되어 들어와
+ * 양쪽을 같은 값으로 맞춥니다. slug에는 %가 들어가지 않으므로(태그 slug 규칙) 이미 디코딩된 값은 그대로입니다.
+ */
+export function slugParam(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+export function tagPath(slug: string) {
+  return `/tags/${slug}`;
+}
+
+export function seriesPath(slug: string) {
+  return `/series/${slug}`;
+}
+
 /** XML 문자열·속성 값 이스케이프 (RSS, sitemap) */
 export function escapeXml(value: string) {
   return value
