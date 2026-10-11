@@ -31,21 +31,43 @@ export function TagInput({
   const [notice, setNotice] = useState("");
   const known = new Set(suggestions.map((name) => name.toLowerCase()));
 
+  // 쉼표가 든 글자(붙여 넣기 등)는 쉼표마다 나눠 여러 태그로 추가합니다. 서버도 같은 규칙으로 나눕니다.
+  // 길이·개수 상한에 걸린 이름은 입력칸에 남겨, 고치거나 다른 태그를 뺀 뒤 다시 추가할 수 있게 합니다.
   function add(value = draft) {
-    const name = normalizeTagName(value);
-    if (!name) return;
-    if (tags.some((tag) => tag.toLowerCase() === name.toLowerCase())) {
-      setNotice(`"${name}" 태그는 이미 있습니다.`);
-    } else if (tags.length >= TAGS_MAX) {
-      setNotice(`태그는 ${TAGS_MAX}개까지 붙일 수 있습니다.`);
-      return;
-    } else {
-      // 대소문자만 다른 기존 태그가 있으면 그 이름으로 붙입니다(서버도 같은 태그로 연결합니다).
-      const existing = suggestions.find((tag) => tag.toLowerCase() === name.toLowerCase());
-      onTagsChange([...tags, existing ?? name]);
-      setNotice(`"${existing ?? name}" 태그를 추가했습니다.`);
+    const next = [...tags];
+    const rest: string[] = [];
+    const added: string[] = [];
+    // 붙여 넣은 여러 이름의 결과를 한 번에 알립니다. 뒤의 성공이 앞의 실패 안내를 덮지 않게 모읍니다.
+    const problems = new Set<string>();
+    for (const part of value.split(",")) {
+      const name = normalizeTagName(part);
+      if (!name) continue;
+      if (next.some((tag) => tag.toLowerCase() === name.toLowerCase())) {
+        problems.add(`"${name}" 태그는 이미 있습니다.`);
+      } else if (name.length > TAG_NAME_MAX) {
+        problems.add(`태그 이름은 ${TAG_NAME_MAX}자 이하로 입력하세요.`);
+        rest.push(name);
+      } else if (next.length >= TAGS_MAX) {
+        problems.add(`태그는 ${TAGS_MAX}개까지 붙일 수 있습니다.`);
+        rest.push(name);
+      } else {
+        // 대소문자만 다른 기존 태그가 있으면 그 이름으로 붙입니다(서버도 같은 태그로 연결합니다).
+        const existing = suggestions.find((tag) => tag.toLowerCase() === name.toLowerCase());
+        next.push(existing ?? name);
+        added.push(existing ?? name);
+      }
     }
-    onDraftChange("");
+    if (added.length === 0 && problems.size === 0) return;
+    onTagsChange(next);
+    setNotice(
+      [
+        added.length > 0 && `${added.map((name) => `"${name}"`).join(", ")} 태그를 추가했습니다.`,
+        ...problems,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
+    onDraftChange(rest.join(", "));
   }
 
   function remove(tag: string) {
@@ -62,12 +84,11 @@ export function TagInput({
           list="post-tag-options"
           autoComplete="off"
           value={draft}
-          maxLength={TAG_NAME_MAX + 1}
           onChange={(event) => {
             const value = event.target.value;
-            // 쉼표를 입력하면 그 앞까지를 태그로 추가합니다.
-            if (value.endsWith(",")) {
-              add(value.slice(0, -1));
+            // 쉼표를 입력하거나 쉼표가 든 글자를 붙여 넣으면 태그로 추가합니다.
+            if (value.includes(",")) {
+              add(value);
               return;
             }
             onDraftChange(value);
