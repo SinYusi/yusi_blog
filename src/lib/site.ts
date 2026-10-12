@@ -9,6 +9,13 @@ export const SITE_NAME = "yusi_blog";
 export const SITE_DESCRIPTION = "만들면서 부딪힌 문제를 커밋처럼 기록하는 프론트엔드 로그";
 export const SITE_AUTHOR = { name: "yusi", url: "https://github.com/SinYusi" };
 export const FEED_PATH = "/feed.xml";
+/** 사이트 공용 Open Graph 이미지(src/app/og.png/route.tsx). 글 상세는 글마다 만든 이미지(opengraph-image)를 씁니다. */
+export const SITE_OG_IMAGE = {
+  url: "/og.png",
+  width: 1200,
+  height: 630,
+  alt: `${SITE_NAME}: ${SITE_DESCRIPTION}`,
+};
 // /sitemap.xml은 운영(Vercel)에서 저장해도 갱신되지 않아 다른 이름을 씁니다(#59). 이전 주소는 next.config.ts에서 이리로 보냅니다.
 export const SITEMAP_PATH = "/sitemap-posts.xml";
 
@@ -77,11 +84,14 @@ export function pageMetadata({
   description = SITE_DESCRIPTION,
   path,
   openGraph,
+  ogImage = SITE_OG_IMAGE,
 }: {
   title?: string;
   description?: string;
   path: string;
   openGraph?: Metadata["openGraph"];
+  /** null이면 넣지 않습니다. 같은 경로의 opengraph-image 파일(글 상세)이 쓰이게 할 때입니다. */
+  ogImage?: typeof SITE_OG_IMAGE | null;
 }): Metadata {
   return {
     ...(title && { title }),
@@ -94,6 +104,7 @@ export function pageMetadata({
       title: title ?? SITE_NAME,
       description,
       url: path,
+      ...(ogImage && { images: [ogImage] }),
       ...openGraph,
     },
   };
