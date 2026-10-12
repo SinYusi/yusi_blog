@@ -30,7 +30,11 @@ export function Comments({ postId }: { postId: number }) {
     const container = containerRef.current;
     if (!container) return;
 
+    // giscus는 실행 뒤 자기 <script>를 지우므로, 두 번 넣지 않도록 따로 기억합니다.
+    let loaded = false;
     function loadGiscus(target: HTMLElement) {
+      if (loaded) return;
+      loaded = true;
       const script = document.createElement("script");
       script.src = `${GISCUS_ORIGIN}/client.js`;
       script.async = true;
@@ -61,6 +65,9 @@ export function Comments({ postId }: { postId: number }) {
         GISCUS_ORIGIN,
       );
     }
+
+    // GitHub 로그인(OAuth)에서 돌아오면 주소에 ?giscus=<세션>이 붙습니다. 이때는 바로 불러와 세션을 저장합니다.
+    if (new URLSearchParams(window.location.search).has("giscus")) loadGiscus(container);
 
     // 스크립트(외부 client.js)부터 댓글 영역이 화면에 가까워질 때 받습니다. 끝까지 읽지 않는 독자는 받지 않습니다.
     const visibility = new IntersectionObserver(
@@ -102,7 +109,8 @@ export function Comments({ postId }: { postId: number }) {
       <h2 id="comments-heading" className="mb-6 font-mono text-meta font-medium text-muted">
         {"// comments"}
       </h2>
-      <div ref={containerRef} />
+      {/* giscus는 id가 있는 .giscus 요소 안에 iframe을 그리고, 로그인 뒤 이 id로 돌아오게 합니다(본문 소제목 id와 겹치지 않는 이름). */}
+      <div ref={containerRef} id="giscus-comments" className="giscus" />
     </section>
   );
 }
