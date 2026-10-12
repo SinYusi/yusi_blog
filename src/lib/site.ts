@@ -37,6 +37,12 @@ export const SITE_URL = new URL(resolveSiteUrl());
 export const ALLOW_INDEXING =
   process.env.VERCEL_ENV === "production" || process.env.ALLOW_INDEXING === "true";
 
+/*
+ * 댓글(Giscus)은 운영 배포에서만 보입니다. 토론을 글 id로 찾는데 개발·미리보기 DB의 id가 운영 글과 겹칠 수 있어,
+ * 그곳에서 단 댓글이 운영 글에 섞이지 않게 합니다.
+ */
+export const COMMENTS_ENABLED = process.env.VERCEL_ENV === "production";
+
 export function absoluteUrl(path: string) {
   return new URL(path, SITE_URL).href;
 }

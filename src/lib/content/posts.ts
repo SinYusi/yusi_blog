@@ -192,6 +192,8 @@ export function latestModifiedAt(items: PostListItem[]) {
 export type SeriesNeighbor = { slug: string; title: string };
 
 export type PostDetail = PostListItem & {
+  /** 바뀌지 않는 글 번호. slug는 바뀔 수 있어(ADR-0012) 댓글 토론 연결에 씁니다. */
+  id: number;
   html: string;
   toc: TocItem[];
   series: {
@@ -212,6 +214,7 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
   const post = await getDb().query.posts.findFirst({
     where: and(eq(posts.slug, slug), isPublic),
     columns: {
+      id: true,
       slug: true,
       title: true,
       summary: true,
@@ -258,6 +261,7 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
   const { html, toc } = await renderPostHtml(post.contentHtml);
 
   return {
+    id: post.id,
     slug: post.slug,
     title: post.title,
     summary: post.summary,
