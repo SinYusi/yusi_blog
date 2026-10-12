@@ -45,7 +45,7 @@ chore/2-workflow  ─┘
    - **로컬 Codex 리뷰:** 코드를 바꾼 작업은 PR을 열기 전에 Claude Code의 Codex 플러그인([codex-plugin-cc](https://github.com/openai/codex-plugin-cc))으로 `/codex:review --base dev`를 실행하고, 타당한 지적을 반영한 뒤 PR을 엽니다. PR을 연 뒤 GitHub 리뷰에서 지적·수정·재리뷰를 여러 번 주고받던 것(#69, #72, #75)을 줄이기 위해서입니다. 읽기 전용 리뷰라 코드를 바꾸지 않습니다.
    - 반영하지 않은 지적이 있으면 근거를 PR 본문에 적습니다. 로컬 리뷰는 PR의 `@codex review`(5단계)를 대신하지 않습니다.
    - 문서만 바꾼 작업은 생략합니다(5단계 표에서도 Codex 리뷰만 받는 범위). Codex 사용량 한도에 걸리면 생략하고 PR 본문에 적습니다.
-   - 설치·로그인은 사용자가 합니다. 순서: `claude plugin marketplace add openai/codex-plugin-cc` → `claude plugin install codex@openai-codex` → Codex CLI 설치(`npm install -g @openai/codex`, npm 전역 경로에 권한이 없으면 `--prefix ~/.npm-global`) → `codex login` → 새 세션을 시작하거나 `/reload-plugins`로 플러그인을 다시 불러옵니다. 준비 상태는 `/codex:setup`으로 확인합니다.
+   - 설치·로그인은 사용자가 합니다. 순서: `claude plugin marketplace add openai/codex-plugin-cc` → `claude plugin install codex@openai-codex` → Codex CLI 설치(`npm install -g @openai/codex`, npm 전역 경로에 권한이 없으면 `--prefix ~/.npm-global`로 설치하고 `~/.npm-global/bin`을 `PATH`에 추가, 예: `~/.zshrc`에 `export PATH=~/.npm-global/bin:$PATH`) → `codex login` → 새 세션을 시작하거나 `/reload-plugins`로 플러그인을 다시 불러옵니다. 준비 상태는 `/codex:setup`으로 확인합니다.
 4. **PR 생성:** `dev`를 대상으로 PR을 만듭니다. PR 템플릿을 채우고, 본문에 `Closes #이슈번호`를 넣어 머지되면 이슈가 자동으로 닫히게 합니다.
 5. **AI 리뷰:** PR을 열면 CodeRabbit이 자동으로 리뷰합니다. 이후 push에는 자동 리뷰가 실행되지 않으므로(CodeRabbit 한도 절약), 리뷰가 달리지 않거나 다시 받아야 하면 코멘트로 요청합니다. Codex는 자동 리뷰를 끄고 코멘트로만 요청합니다.
    - CodeRabbit: `@coderabbitai review` (무료 플랜은 시간당 1회). 설정은 `.coderabbit.yaml`: 한국어, 원인과 근거 중심 설명, 리뷰 중점(성능, 접근성, 디자인 토큰 준수), PR 제목 형식 검사(실패 시 에러), 이슈 반영도 평가(경고)
