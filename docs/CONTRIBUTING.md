@@ -42,7 +42,8 @@ chore/2-workflow  ─┘
 2. **브랜치 생성:** 최신 `dev`에서 이슈 번호를 포함한 브랜치를 만듭니다.
    - 브랜치를 바꾼 뒤에는 `pnpm install --frozen-lockfile`을 실행합니다. `node_modules`는 브랜치를 바꿔도 그대로 남아서, 다른 브랜치에서 설치한 패키지 때문에 로컬 빌드는 통과하고 Vercel 빌드만 실패할 수 있습니다(#24에서 `tsx`가 `package.json`에 빠져 있던 사례).
 3. **작업:** 작업 단위마다 커밋합니다. 커밋하기 전에 `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`를 통과시킵니다.
-   - **로컬 Codex 리뷰:** 코드를 바꾼 작업은 PR을 열기 전에 Claude Code의 Codex 플러그인([codex-plugin-cc](https://github.com/openai/codex-plugin-cc))으로 `/codex:review --base dev`를 실행하고, 타당한 지적을 반영한 뒤 PR을 엽니다. PR을 연 뒤 GitHub 리뷰에서 지적·수정·재리뷰를 여러 번 주고받던 것(#69, #72, #75)을 줄이기 위해서입니다. 읽기 전용 리뷰라 코드를 바꾸지 않습니다.
+   - **로컬 Codex 리뷰:** 코드를 바꾼 작업은 PR을 열기 전에 Claude Code의 Codex 플러그인([codex-plugin-cc](https://github.com/openai/codex-plugin-cc))으로 `dev` 대비 리뷰를 받고, 타당한 지적을 반영한 뒤 PR을 엽니다. PR을 연 뒤 GitHub 리뷰에서 지적·수정·재리뷰를 여러 번 주고받던 것(#69, #72, #75)을 줄이기 위해서입니다. 읽기 전용 리뷰라 코드를 바꾸지 않습니다.
+     - 실행: 슬래시 명령 `/codex:review`는 사용자만 부를 수 있으므로(`disable-model-invocation`), Claude는 같은 동작을 하는 플러그인 스크립트를 직접 실행합니다: `node ~/.claude/plugins/cache/openai-codex/codex/<버전>/scripts/codex-companion.mjs review --base dev --wait`. 사용자는 `/codex:review --base dev`로 같은 리뷰를 받을 수 있습니다.
    - 반영하지 않은 지적이 있으면 근거를 PR 본문에 적습니다. 로컬 리뷰는 PR의 `@codex review`(5단계)를 대신하지 않습니다.
    - 문서만 바꾼 작업은 생략합니다(5단계 표에서도 Codex 리뷰만 받는 범위). Codex 사용량 한도에 걸리면 생략하고 PR 본문에 적습니다.
    - 설치·로그인은 사용자가 합니다. 순서: `claude plugin marketplace add openai/codex-plugin-cc` → `claude plugin install codex@openai-codex` → Codex CLI 설치(`npm install -g @openai/codex`, npm 전역 경로에 권한이 없으면 `--prefix ~/.npm-global`로 설치하고 `~/.npm-global/bin`을 `PATH`에 추가, 예: `~/.zshrc`에 `export PATH=~/.npm-global/bin:$PATH`) → `codex login` → 새 세션을 시작하거나 `/reload-plugins`로 플러그인을 다시 불러옵니다. 준비 상태는 `/codex:setup`으로 확인합니다.
