@@ -22,12 +22,12 @@ chore/2-workflow  ─┘
 | ----------------- | ---------------------------------------------------------- |
 | 사용자            | 작업 지시, PR 최종 확인과 머지, 릴리스 시점 결정           |
 | Claude            | 이슈 작성부터 리뷰 반영까지 (아래 1~7단계), 릴리스 PR 작성 |
-| CodeRabbit, Codex | PR 리뷰                                                    |
+| CodeRabbit, Codex | PR 리뷰 (Codex는 PR 전 로컬 리뷰도)                        |
 
 ## 흐름
 
 ```
-이슈 생성 → 브랜치 생성 → 작업 → PR 생성 → AI 리뷰 → 리뷰 반영 → (사용자) 머지
+이슈 생성 → 브랜치 생성 → 작업 → 로컬 Codex 리뷰 → PR 생성 → AI 리뷰 → 리뷰 반영 → (사용자) 머지
 ```
 
 1. **이슈 생성:** 이슈 템플릿 중 하나로 이슈를 만들고, 템플릿의 필수 항목을 채웁니다. 로드맵 단계에 맞는 마일스톤을 연결합니다.
@@ -42,6 +42,10 @@ chore/2-workflow  ─┘
 2. **브랜치 생성:** 최신 `dev`에서 이슈 번호를 포함한 브랜치를 만듭니다.
    - 브랜치를 바꾼 뒤에는 `pnpm install --frozen-lockfile`을 실행합니다. `node_modules`는 브랜치를 바꿔도 그대로 남아서, 다른 브랜치에서 설치한 패키지 때문에 로컬 빌드는 통과하고 Vercel 빌드만 실패할 수 있습니다(#24에서 `tsx`가 `package.json`에 빠져 있던 사례).
 3. **작업:** 작업 단위마다 커밋합니다. 커밋하기 전에 `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`를 통과시킵니다.
+   - **로컬 Codex 리뷰:** 코드를 바꾼 작업은 PR을 열기 전에 Claude Code의 Codex 플러그인([codex-plugin-cc](https://github.com/openai/codex-plugin-cc))으로 `/codex:review --base dev`를 실행하고, 타당한 지적을 반영한 뒤 PR을 엽니다. PR을 연 뒤 GitHub 리뷰에서 지적·수정·재리뷰를 여러 번 주고받던 것(#69, #72, #75)을 줄이기 위해서입니다. 읽기 전용 리뷰라 코드를 바꾸지 않습니다.
+   - 반영하지 않은 지적이 있으면 근거를 PR 본문에 적습니다. 로컬 리뷰는 PR의 `@codex review`(5단계)를 대신하지 않습니다.
+   - 문서만 바꾼 작업은 생략합니다(5단계 표에서도 Codex 리뷰만 받는 범위). Codex 사용량 한도에 걸리면 생략하고 PR 본문에 적습니다.
+   - 설치·로그인은 사용자가 합니다(`claude plugin install codex@openai-codex`, Codex CLI, `codex login`). 준비 상태는 `/codex:setup`으로 확인합니다.
 4. **PR 생성:** `dev`를 대상으로 PR을 만듭니다. PR 템플릿을 채우고, 본문에 `Closes #이슈번호`를 넣어 머지되면 이슈가 자동으로 닫히게 합니다.
 5. **AI 리뷰:** PR을 열면 CodeRabbit이 자동으로 리뷰합니다. 이후 push에는 자동 리뷰가 실행되지 않으므로(CodeRabbit 한도 절약), 리뷰가 달리지 않거나 다시 받아야 하면 코멘트로 요청합니다. Codex는 자동 리뷰를 끄고 코멘트로만 요청합니다.
    - CodeRabbit: `@coderabbitai review` (무료 플랜은 시간당 1회). 설정은 `.coderabbit.yaml`: 한국어, 원인과 근거 중심 설명, 리뷰 중점(성능, 접근성, 디자인 토큰 준수), PR 제목 형식 검사(실패 시 에러), 이슈 반영도 평가(경고)
