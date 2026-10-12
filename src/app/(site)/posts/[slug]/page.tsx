@@ -38,6 +38,8 @@ export async function generateMetadata({ params }: PageProps<"/posts/[slug]">): 
     title: post.title,
     description: post.summary || undefined,
     path: postPath(post.slug),
+    // 글마다 만든 이미지(opengraph-image.tsx)를 씁니다. 메타데이터에 이미지를 넣으면 그쪽이 우선합니다.
+    ogImage: null,
     openGraph: {
       type: "article",
       publishedTime: post.publishedAt.toISOString(),

@@ -29,7 +29,8 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
-  twitter: { card: "summary" },
+  // 미리보기 카드에 Open Graph 이미지(opengraph-image)를 크게 보여 줍니다.
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
