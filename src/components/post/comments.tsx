@@ -60,7 +60,8 @@ export function Comments({ postId }: { postId: number }) {
       <h2 id="comments-heading" className="mb-6 font-mono text-meta font-medium text-muted">
         {"// comments"}
       </h2>
-      <div ref={containerRef}>
+      {/* 위젯을 받는 동안 높이가 0이면 그려지는 순간 바닥글이 밀리므로, 댓글이 없을 때의 위젯 높이(약 300px)만큼 미리 잡습니다. */}
+      <div ref={containerRef} className="min-h-72">
         {visible && (
           // key: 다른 글로 옮기면 새 iframe을 만들어 이전 글의 토론이 남지 않게 합니다.
           <Giscus
