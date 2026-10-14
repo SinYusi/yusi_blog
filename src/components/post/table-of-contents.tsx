@@ -17,7 +17,11 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
     if (!list) return;
     const reveal = () => {
       const active = list.querySelector<HTMLElement>('[aria-current="location"]');
-      if (!active) return;
+      // 현재 항목이 없으면(첫 소제목 전) 목차를 맨 위로 되돌립니다.
+      if (!active) {
+        list.scrollTop = 0;
+        return;
+      }
       const top = active.offsetTop;
       const bottom = top + active.offsetHeight;
       if (top < list.scrollTop) list.scrollTop = top;
