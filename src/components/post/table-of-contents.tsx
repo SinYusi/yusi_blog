@@ -1,12 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { TocItem } from "@/lib/content/render";
 
 /** 데스크톱 사이드바 목차. 화면 위쪽에 들어온 소제목을 현재 위치로 표시합니다. */
 export function TableOfContents({ items }: { items: TocItem[] }) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const listRef = useRef<HTMLOListElement>(null);
+
+  // 목차가 높이 제한을 넘어 목록 안에서 스크롤될 때, 현재 항목이 목록 밖으로 숨지 않게 목록만 스크롤합니다.
+  // scrollIntoView는 페이지 전체를 움직일 수 있어 목록의 scrollTop을 직접 맞춥니다(목록이 offsetParent).
+  useEffect(() => {
+    const list = listRef.current;
+    const active = list?.querySelector<HTMLElement>('[aria-current="location"]');
+    if (!list || !active) return;
+    const top = active.offsetTop;
+    const bottom = top + active.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight)
+      list.scrollTop = bottom - list.clientHeight;
+  }, [activeId]);
 
   useEffect(() => {
     const headings = items
@@ -62,7 +76,10 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
   return (
     <nav aria-label="목차" className="flex min-h-0 flex-col">
       <h2 className="mb-4 font-mono text-meta font-medium text-muted">{"// on this page"}</h2>
-      <ol className="flex min-h-0 flex-col overflow-y-auto border-l border-border text-body">
+      <ol
+        ref={listRef}
+        className="relative flex min-h-0 flex-col overflow-y-auto border-l border-border text-body"
+      >
         {items.map((item) => (
           <li key={item.id}>
             <a
