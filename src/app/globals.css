@@ -111,7 +111,8 @@
   --breakpoint-lg: 64rem;
 
   --container-article: 42.5rem;
-  --container-content: 68rem;
+  /* 콘텐츠 1088px(68rem) + 태블릿 이상 좌우 여백 40px씩. max-w-content는 여백(px-5 md:px-10)을 포함한 상자에 씁니다. */
+  --container-content: 73rem;
   --container-admin-sidebar: 15rem;
 }
 
