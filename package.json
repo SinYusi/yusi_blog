@@ -20,6 +20,7 @@
     "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@giscus/react": "3.1.0",
     "@neondatabase/serverless": "^1.1.0",
     "@tiptap/core": "3.31.4",
     "@tiptap/extension-code-block": "3.31.4",

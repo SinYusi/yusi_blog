@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 
 import { CodeCopy } from "@/components/post/code-copy";
+import { Comments } from "@/components/post/comments";
 import { SeriesNav } from "@/components/post/series-nav";
 import { TableOfContents } from "@/components/post/table-of-contents";
 import { TagList } from "@/components/posts/tag-list";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/content/posts";
 import { formatDate } from "@/lib/format";
 import {
+  COMMENTS_ENABLED,
   SITE_AUTHOR,
   SITE_NAME,
   absoluteUrl,
@@ -153,6 +155,7 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
         </CodeCopy>
 
         {post.series && <SeriesNav series={post.series} />}
+        {COMMENTS_ENABLED && <Comments postId={post.id} />}
       </article>
 
       {hasToc && (
