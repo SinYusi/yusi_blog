@@ -13,7 +13,7 @@
 
 1. `gh issue create`로 이슈를 만든다. 본문은 .github/ISSUE_TEMPLATE에서 작업 종류에 맞는 템플릿의 필수 항목을 따르고(버그는 현상, 재현 방법, 기대 동작), 템플릿의 라벨과 로드맵 단계 마일스톤을 붙인다.
 2. 최신 `dev`에서 `<type>/<이슈번호>-<짧은-설명>` 브랜치를 만든다.
-3. 작업하고, 커밋 전에 format:check, lint, typecheck, build를 통과시킨다. 문서만 바꾼 작업이 아니면(코드·워크플로·설정·의존성) PR을 열기 전에 Codex 플러그인 스크립트(`codex-companion.mjs review --base <PR 대상 브랜치> --wait`, 사용자 명령 `/codex:review`와 같음)로 로컬 리뷰를 받고 타당한 지적을 반영한다(문서만 바꾸면 생략, docs/CONTRIBUTING.md 3단계).
+3. 작업하고, 커밋 전에 format:check, lint, typecheck, build를 통과시킨다. 문서만 바꾼 작업이 아니면(코드·워크플로·설정·의존성, 긴급 수정 포함) PR을 열기 전에 Codex 플러그인 스크립트(`codex-companion.mjs review --base <PR 대상 브랜치> --wait`, 사용자 명령 `/codex:review`와 같음)로 로컬 리뷰를 받고 타당한 지적을 반영한다(문서만 바꾸면 생략, docs/CONTRIBUTING.md 3단계).
 4. `dev`를 대상으로 .github/pull_request_template.md 형식의 PR을 만들고 `Closes #이슈번호`를 넣는다.
 5. CodeRabbit, Codex 리뷰를 받는다 (CodeRabbit 자동 리뷰는 PR을 열 때만, Codex는 요청할 때만). 리뷰가 달리지 않거나 push 후 다시 받으려면 `@coderabbitai review`, `@codex review`로 요청한다. 머지 전 필수 리뷰는 변경 범위에 따라 다르다(docs/CONTRIBUTING.md 5단계 표: 문서만 바꾸면 Codex만).
 6. 타당한 지적은 반영하고 스레드에 반영 커밋을 답글로 단 뒤 해결 처리한다. 반영하지 않는 지적에는 근거를 답글로 남긴다.
