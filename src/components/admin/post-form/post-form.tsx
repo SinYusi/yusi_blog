@@ -760,7 +760,8 @@ export function PostForm({
         )}
       </fieldset>
 
-      <div className="flex flex-col gap-3 border-t border-border pt-6 md:flex-row md:items-center">
+      {/* 저장 버튼·저장 상태·재시도는 긴 글을 편집하는 중에도 보이도록 화면 아래에 붙입니다. */}
+      <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t border-border bg-bg py-4 md:flex-row md:items-center">
         <button
           type="submit"
           disabled={

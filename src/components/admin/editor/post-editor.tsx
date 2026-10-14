@@ -472,6 +472,9 @@ export function PostEditor({
     // 본문 오류가 있으면 입력 영역(contenteditable)을 aria-invalid로 표시하고 메시지와 연결합니다.
     // useEditor는 렌더링마다 바뀐 옵션을 setOptions로 반영하므로 오류가 생기고 사라질 때도 따라 바뀝니다.
     editorProps: {
+      // 커서를 따라 스크롤할 때 화면 아래 고정된 저장 영역(모바일에서 약 130px)에 가려지지 않게 여백을 둡니다.
+      scrollThreshold: { top: 8, right: 8, bottom: 160, left: 8 },
+      scrollMargin: { top: 8, right: 8, bottom: 160, left: 8 },
       attributes: errorId
         ? { ...editorAttributes, "aria-invalid": "true", "aria-describedby": errorId }
         : editorAttributes,
