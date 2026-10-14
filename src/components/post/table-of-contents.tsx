@@ -60,9 +60,9 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
   }, [items]);
 
   return (
-    <nav aria-label="목차">
+    <nav aria-label="목차" className="flex min-h-0 flex-col">
       <h2 className="mb-4 font-mono text-meta font-medium text-muted">{"// on this page"}</h2>
-      <ol className="flex flex-col border-l border-border text-body">
+      <ol className="flex min-h-0 flex-col overflow-y-auto border-l border-border text-body">
         {items.map((item) => (
           <li key={item.id}>
             <a
