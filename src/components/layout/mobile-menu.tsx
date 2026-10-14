@@ -86,7 +86,7 @@ export function MobileMenu() {
             <div className="flex gap-2">
               <a
                 href={FEED_PATH}
-                className="inline-flex min-h-11 items-center px-2 font-mono text-meta text-muted hover:text-fg"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 font-mono text-meta text-muted hover:text-fg"
               >
                 rss
               </a>

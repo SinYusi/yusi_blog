@@ -113,11 +113,15 @@ function rehypeCodeBlocks(highlighter: Awaited<ReturnType<typeof createHighlight
 
 /*
  * 공개 글 상세의 본문 열 너비에 맞춘 sizes(posts/[slug]/page.tsx, (site)/layout.tsx).
- * 본문 열은 max-w-article(680px)로 제한되므로 화면이 720px 이상이면 680px이고,
- * 그보다 좁으면 한 열에서 좌우 여백 20px씩을 뺀 너비입니다(768px부터 여백 40px이지만 그때는 이미 680px).
+ * 본문 열은 max-w-article(680px)로 제한됩니다.
+ * - 1112px 이상: 12열 그리드의 8열이 680px을 넘으므로 680px
+ * - 1024~1111px: 8열 = (화면 - 여백 80 - 열 간격 264) / 12 × 8 + 168 = 66.67vw - 61.33px
+ * - 720~1023px: 한 열이 680px을 넘으므로 680px
+ * - 그보다 좁으면: 한 열에서 좌우 여백 20px씩을 뺀 너비
  * 레이아웃을 바꾸면 이 값도 함께 바꿉니다. 너무 크게 잡으면 필요 이상으로 큰 변환본을 받습니다.
  */
-const IMAGE_SIZES = "(min-width: 720px) 680px, calc(100vw - 40px)";
+const IMAGE_SIZES =
+  "(min-width: 69.5rem) 680px, (min-width: 64rem) calc(66.6667vw - 61.333px), (min-width: 45rem) 680px, calc(100vw - 40px)";
 
 /*
  * 본문은 HTML 문자열로 넣으므로 <Image> 컴포넌트를 쓸 수 없어, getImageProps로 같은 속성을 만들어 바꿉니다.
