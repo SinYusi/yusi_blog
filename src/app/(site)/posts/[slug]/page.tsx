@@ -161,7 +161,7 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
       {hasToc && (
         <aside className="hidden lg:col-span-3 lg:col-start-10 lg:block">
           {/* 화면 높이(위아래 여백 32px씩) 안에 두고, 목차가 넘치면 목차 안에서 스크롤합니다. */}
-          <div className="sticky top-8 flex max-h-[calc(100dvh-4rem)] flex-col pt-32">
+          <div className="sticky top-8 flex max-h-[calc(100dvh-var(--spacing)*16)] flex-col pt-32">
             <TableOfContents items={post.toc} />
           </div>
         </aside>
