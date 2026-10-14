@@ -395,6 +395,9 @@ const editorAttributes = {
   class: "prose-article min-h-96 px-5 py-6 focus:outline-none md:px-8",
 };
 
+// 커서 자동 스크롤의 안전 여백. 사이트 간격 단위(globals.css --spacing, 0.25rem = 4px) 한 칸입니다.
+const SCROLL_GAP = 4;
+
 export function PostEditor({
   initialContent,
   onEditorChange,
@@ -475,10 +478,20 @@ export function PostEditor({
     // 본문 오류가 있으면 입력 영역(contenteditable)을 aria-invalid로 표시하고 메시지와 연결합니다.
     // useEditor는 렌더링마다 바뀐 옵션을 setOptions로 반영하므로 오류가 생기고 사라질 때도 따라 바뀝니다.
     editorProps: {
-      // 커서를 따라 스크롤할 때 화면 아래 고정된 저장 영역에 가려지지 않게, 그 높이에 기본 여백(ProseMirror 기본값 5px)을 더합니다.
+      // 커서를 따라 스크롤할 때 화면 아래 고정된 저장 영역에 가려지지 않게, 그 높이에 간격 한 단위(SCROLL_GAP)를 더합니다.
       // 저장 영역은 상태 문구·재시도 버튼에 따라 높이가 바뀌므로 글 저장 폼이 잰 값을 받습니다.
-      scrollThreshold: { top: 5, right: 5, bottom: bottomInset + 5, left: 5 },
-      scrollMargin: { top: 5, right: 5, bottom: bottomInset + 5, left: 5 },
+      scrollThreshold: {
+        top: SCROLL_GAP,
+        right: SCROLL_GAP,
+        bottom: bottomInset + SCROLL_GAP,
+        left: SCROLL_GAP,
+      },
+      scrollMargin: {
+        top: SCROLL_GAP,
+        right: SCROLL_GAP,
+        bottom: bottomInset + SCROLL_GAP,
+        left: SCROLL_GAP,
+      },
       attributes: errorId
         ? { ...editorAttributes, "aria-invalid": "true", "aria-describedby": errorId }
         : editorAttributes,
