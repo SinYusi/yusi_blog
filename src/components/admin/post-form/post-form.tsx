@@ -158,6 +158,18 @@ export function PostForm({
   const errors = state.status === "error" ? state.fieldErrors : {};
 
   const [editor, setEditor] = useState<Editor | null>(null);
+  // 화면 아래 고정된 저장 영역의 높이. 에디터가 커서를 그 위까지 올려 가려지지 않게 합니다.
+  const saveBarRef = useRef<HTMLDivElement>(null);
+  const [saveBarHeight, setSaveBarHeight] = useState(0);
+  useEffect(() => {
+    const bar = saveBarRef.current;
+    if (!bar) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setSaveBarHeight(Math.ceil(entry.borderBoxSize[0]?.blockSize ?? bar.offsetHeight)),
+    );
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
   // 이미지를 올리는 중에는 본문에 아직 이미지가 없으므로 저장하지 않습니다(직접·자동 모두).
   const [uploading, setUploading] = useState(false);
   const [slug, setSlug] = useState(initial.slug);
@@ -698,6 +710,7 @@ export function PostForm({
             onUploadingChange={setUploading}
             uploadsBlocked={pending}
             errorId={errors.content ? errorId("content") : undefined}
+            bottomInset={saveBarHeight}
           />
         )}
         <FieldError field="content" errors={errors} />
@@ -761,7 +774,10 @@ export function PostForm({
       </fieldset>
 
       {/* 저장 버튼·저장 상태·재시도는 긴 글을 편집하는 중에도 보이도록 화면 아래에 붙입니다. */}
-      <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t border-border bg-bg py-4 md:flex-row md:items-center">
+      <div
+        ref={saveBarRef}
+        className="sticky bottom-0 z-10 flex flex-col gap-3 border-t border-border bg-bg py-4 md:flex-row md:items-center"
+      >
         <button
           type="submit"
           disabled={

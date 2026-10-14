@@ -401,6 +401,7 @@ export function PostEditor({
   onUploadingChange,
   uploadsBlocked = false,
   errorId,
+  bottomInset = 0,
 }: {
   /** 편집할 글의 에디터 원본. 없으면 빈 문서로 시작합니다. */
   initialContent?: JSONContent | null;
@@ -412,6 +413,8 @@ export function PostEditor({
   uploadsBlocked?: boolean;
   /** 본문 오류 메시지의 id. 있으면 본문 입력 영역을 aria-invalid로 표시하고 메시지와 연결합니다. */
   errorId?: string;
+  /** 화면 아래에 고정된 요소(저장 영역)의 높이(px). 커서를 따라 스크롤할 때 그 위까지 올립니다. */
+  bottomInset?: number;
 } = {}) {
   const openLinkRef = useRef<() => void>(() => {});
   const slashKeyRef = useRef<(key: string) => boolean>(() => false);
@@ -472,9 +475,10 @@ export function PostEditor({
     // 본문 오류가 있으면 입력 영역(contenteditable)을 aria-invalid로 표시하고 메시지와 연결합니다.
     // useEditor는 렌더링마다 바뀐 옵션을 setOptions로 반영하므로 오류가 생기고 사라질 때도 따라 바뀝니다.
     editorProps: {
-      // 커서를 따라 스크롤할 때 화면 아래 고정된 저장 영역(모바일에서 약 130px)에 가려지지 않게 여백을 둡니다.
-      scrollThreshold: { top: 8, right: 8, bottom: 160, left: 8 },
-      scrollMargin: { top: 8, right: 8, bottom: 160, left: 8 },
+      // 커서를 따라 스크롤할 때 화면 아래 고정된 저장 영역에 가려지지 않게, 그 높이에 기본 여백(ProseMirror 기본값 5px)을 더합니다.
+      // 저장 영역은 상태 문구·재시도 버튼에 따라 높이가 바뀌므로 글 저장 폼이 잰 값을 받습니다.
+      scrollThreshold: { top: 5, right: 5, bottom: bottomInset + 5, left: 5 },
+      scrollMargin: { top: 5, right: 5, bottom: bottomInset + 5, left: 5 },
       attributes: errorId
         ? { ...editorAttributes, "aria-invalid": "true", "aria-describedby": errorId }
         : editorAttributes,
