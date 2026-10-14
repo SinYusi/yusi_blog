@@ -44,6 +44,7 @@ chore/2-workflow  ─┘
 3. **작업:** 작업 단위마다 커밋합니다. 커밋하기 전에 `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`를 통과시킵니다.
    - **로컬 Codex 리뷰:** 코드를 바꾼 작업은 PR을 열기 전에 Claude Code의 Codex 플러그인([codex-plugin-cc](https://github.com/openai/codex-plugin-cc))으로 `dev` 대비 리뷰를 받고, 타당한 지적을 반영한 뒤 PR을 엽니다. PR을 연 뒤 GitHub 리뷰에서 지적·수정·재리뷰를 여러 번 주고받던 것(#69, #72, #75)을 줄이기 위해서입니다. 읽기 전용 리뷰라 코드를 바꾸지 않습니다.
      - 실행: 슬래시 명령 `/codex:review`는 사용자만 부를 수 있으므로(`disable-model-invocation`), Claude는 같은 동작을 하는 플러그인 스크립트를 직접 실행합니다. 플러그인이 실제로 불러오는 위치는 `claude plugin list --json`의 `codex@openai-codex` 항목 `installPath`이므로(캐시 위치 설정·여러 버전이 남은 경우에도 맞음), 그 경로의 `scripts/codex-companion.mjs`를 실행합니다: `node "<installPath>/scripts/codex-companion.mjs" review --base dev --wait`. 사용자는 `/codex:review --base dev`로 같은 리뷰를 받을 수 있습니다.
+     - 결과 확인: 명령이 끝나도(종료 코드 0) 출력에 `# Codex Review` 제목과 판정이 없으면 리뷰가 실행되지 않은 것입니다(플러그인 1.0.6에서 시작 로그만 남기고 끝나는 경우가 있음, [openai/codex-plugin-cc#611](https://github.com/openai/codex-plugin-cc/issues/611)). 다시 실행하고, 그래도 없으면 로컬 리뷰를 받지 못했다고 PR 본문에 적습니다.
      - 기준 브랜치는 PR 대상과 같게 둡니다. 일반 작업은 `dev`, 긴급 수정(hotfix)은 `main`입니다. 다르게 두면 이미 리뷰한 변경까지 다시 리뷰합니다.
    - 반영하지 않은 지적이 있으면 근거를 PR 본문에 적습니다. 로컬 리뷰는 PR의 `@codex review`(5단계)를 대신하지 않습니다.
    - 문서만 바꾼 작업은 생략합니다(5단계 표에서도 Codex 리뷰만 받는 범위). Codex 사용량 한도에 걸리면 생략하고 PR 본문에 적습니다.
