@@ -158,17 +158,24 @@ export function PostForm({
   const errors = state.status === "error" ? state.fieldErrors : {};
 
   const [editor, setEditor] = useState<Editor | null>(null);
-  // 화면 아래 고정된 저장 영역의 높이. 에디터가 커서를 그 위까지 올려 가려지지 않게 합니다.
+  // 화면 아래 고정된 저장 영역의 높이. 에디터 커서와 포커스 이동이 그 위까지 스크롤되게 해 가려지지 않게 합니다.
   const saveBarRef = useRef<HTMLDivElement>(null);
   const [saveBarHeight, setSaveBarHeight] = useState(0);
   useEffect(() => {
     const bar = saveBarRef.current;
     if (!bar) return;
-    const observer = new ResizeObserver(([entry]) =>
-      setSaveBarHeight(Math.ceil(entry.borderBoxSize[0]?.blockSize ?? bar.offsetHeight)),
-    );
+    const root = document.documentElement;
+    const observer = new ResizeObserver(([entry]) => {
+      const height = Math.ceil(entry.borderBoxSize[0]?.blockSize ?? bar.offsetHeight);
+      setSaveBarHeight(height);
+      // Tab으로 입력칸·버튼을 옮겨 다닐 때도 브라우저가 저장 영역 위까지 스크롤하게 합니다.
+      root.style.scrollPaddingBottom = `${height}px`;
+    });
     observer.observe(bar);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      root.style.scrollPaddingBottom = "";
+    };
   }, []);
   // 이미지를 올리는 중에는 본문에 아직 이미지가 없으므로 저장하지 않습니다(직접·자동 모두).
   const [uploading, setUploading] = useState(false);
