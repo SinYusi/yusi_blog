@@ -11,15 +11,24 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
 
   // 목차가 높이 제한을 넘어 목록 안에서 스크롤될 때, 현재 항목이 목록 밖으로 숨지 않게 목록만 스크롤합니다.
   // scrollIntoView는 페이지 전체를 움직일 수 있어 목록의 scrollTop을 직접 맞춥니다(목록이 offsetParent).
+  // 창 높이가 바뀌어 목록이 줄어들 때도 다시 맞춥니다.
   useEffect(() => {
     const list = listRef.current;
-    const active = list?.querySelector<HTMLElement>('[aria-current="location"]');
-    if (!list || !active) return;
-    const top = active.offsetTop;
-    const bottom = top + active.offsetHeight;
-    if (top < list.scrollTop) list.scrollTop = top;
-    else if (bottom > list.scrollTop + list.clientHeight)
-      list.scrollTop = bottom - list.clientHeight;
+    if (!list) return;
+    const reveal = () => {
+      const active = list.querySelector<HTMLElement>('[aria-current="location"]');
+      if (!active) return;
+      const top = active.offsetTop;
+      const bottom = top + active.offsetHeight;
+      if (top < list.scrollTop) list.scrollTop = top;
+      else if (bottom > list.scrollTop + list.clientHeight) {
+        list.scrollTop = bottom - list.clientHeight;
+      }
+    };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(list);
+    return () => observer.disconnect();
   }, [activeId]);
 
   useEffect(() => {
