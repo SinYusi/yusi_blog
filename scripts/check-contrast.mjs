@@ -16,7 +16,7 @@ const PAIRS = [
   ["date", ["bg", "surface"]],
   ["danger", ["bg", "surface", "code"]],
   ["success", ["bg", "surface"]],
-  ["bg", ["accent"]], // 주요 버튼: accent 바탕 위 글자
+  ["bg", ["accent", "fg", "fg-secondary"]], // accent 채움(현재 페이지 등), 관리자 주요 버튼(fg 바탕, 호버 fg-secondary) 위 글자
 ];
 
 function readThemes(css) {

@@ -13,7 +13,7 @@ export const colorTokens = [
   { name: "fg-secondary", swatch: "bg-fg-secondary", usage: "보조 본문, 카드 요약" },
   { name: "fg-article", swatch: "bg-fg-article", usage: "글 본문" },
   { name: "muted", swatch: "bg-muted", usage: "메타 정보, 비활성 링크" },
-  { name: "accent", swatch: "bg-accent", usage: "링크, 강조, 주요 버튼" },
+  { name: "accent", swatch: "bg-accent", usage: "링크, 강조, 현재 위치" },
   { name: "accent-hover", swatch: "bg-accent-hover", usage: "호버, 포커스 링" },
   { name: "date", swatch: "bg-date", usage: "날짜, 주의" },
   { name: "danger", swatch: "bg-danger", usage: "에러" },
