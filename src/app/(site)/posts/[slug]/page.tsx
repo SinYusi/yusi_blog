@@ -94,7 +94,8 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
   return (
     <div className="grid grid-cols-1 gap-x-6 pt-8 pb-16 md:pt-12 lg:grid-cols-12 lg:pt-16">
       <PostJsonLd post={post} />
-      <article className="min-w-0 lg:col-span-8">
+      {/* 본문 읽기 폭은 화면 너비와 상관없이 680px 이하로 둡니다(DESIGN.md). 태블릿 한 열에서 한 줄이 길어지지 않게 합니다. */}
+      <article className="max-w-article min-w-0 lg:col-span-8">
         <header className="border-b border-border pb-6 md:pb-8">
           {post.series && (
             <p className="-mt-3 mb-1 font-mono text-caption text-muted md:text-meta">
@@ -151,7 +152,8 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
 
         <CodeCopy>
           {/* 본문은 renderPostHtml에서 허용 목록으로 정화(sanitize)한 HTML입니다. */}
-          <div className="prose-article" dangerouslySetInnerHTML={{ __html: post.html }} />
+          {/* 제목 영역·접이식 목차와 첫 문단 사이를 띄웁니다(관리자 미리보기는 그대로). */}
+          <div className="prose-article pt-8" dangerouslySetInnerHTML={{ __html: post.html }} />
         </CodeCopy>
 
         {post.series && <SeriesNav series={post.series} />}
