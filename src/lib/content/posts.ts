@@ -22,7 +22,7 @@ export const POSTS_PAGE_SIZE = 10;
  * 공개 조건: 발행(published) 또는 예약(scheduled) 상태이고 발행 시각이 지난 글.
  * 예약 글을 발행 시각에 published로 바꾸는 작업을 따로 두지 않고, 조회 조건으로 공개 여부를 정합니다.
  */
-const isPublic = and(
+export const isPublic = and(
   inArray(posts.status, ["published", "scheduled"]),
   lte(posts.publishedAt, sql`now()`),
 );

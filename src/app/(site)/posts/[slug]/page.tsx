@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 
 import { CodeCopy } from "@/components/post/code-copy";
 import { Comments } from "@/components/post/comments";
+import { PostStats } from "@/components/post/post-stats";
 import { SeriesNav } from "@/components/post/series-nav";
 import { TableOfContents } from "@/components/post/table-of-contents";
 import { TagList } from "@/components/posts/tag-list";
@@ -156,6 +157,7 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
           <div className="prose-article pt-8" dangerouslySetInnerHTML={{ __html: post.html }} />
         </CodeCopy>
 
+        <PostStats postId={post.id} />
         {post.series && <SeriesNav series={post.series} />}
         {COMMENTS_ENABLED && <Comments postId={post.id} />}
       </article>
