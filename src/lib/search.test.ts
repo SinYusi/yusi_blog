@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { highlightParts, search, type SearchDoc } from "./search";
+import { highlightParts, htmlToSearchText, search, type SearchDoc } from "./search";
 
 const doc = (over: Partial<SearchDoc>): SearchDoc => ({
   slug: "a",
@@ -67,5 +67,16 @@ describe("highlightParts", () => {
       { text: ".js ", match: false },
       { text: "next", match: true },
     ]);
+  });
+});
+
+describe("htmlToSearchText", () => {
+  it("인라인 서식은 글자를 잇고 블록 경계에만 공백을 넣으며 문자 참조를 되돌린다", () => {
+    assert.equal(
+      htmlToSearchText(
+        "<h2>제목</h2><p>리<strong>렌더링</strong> &amp; <code>memo</code></p><ul><li>a</li><li>b</li></ul>",
+      ),
+      "제목 리렌더링 & memo a b",
+    );
   });
 });

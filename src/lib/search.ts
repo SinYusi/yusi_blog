@@ -23,6 +23,30 @@ export const SEARCH_INDEX_PATH = "/search-index.json";
 const SNIPPET_BEFORE = 30;
 const SNIPPET_LENGTH = 120;
 
+const HTML_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  "#39": "'",
+  nbsp: " ",
+};
+
+// 문단·목록·표 같은 블록의 경계. 여기에만 공백을 넣고, 굵게·링크 같은 인라인 태그는 글자를 그대로 잇습니다
+// ("리<strong>렌더링</strong>" → "리렌더링").
+const BLOCK_TAG =
+  /<\/?(?:p|h[1-6]|li|ul|ol|pre|blockquote|figure|figcaption|aside|div|table|thead|tbody|tr|td|th)\b[^>]*>|<(?:br|hr)\b[^>]*>/gi;
+
+/** 본문 HTML → 검색용 글자. 태그를 걷어내고 자주 쓰는 문자 참조만 되돌립니다(검색용이라 화면에 그리지 않음). */
+export function htmlToSearchText(html: string) {
+  return html
+    .replace(BLOCK_TAG, " ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (_, name: string) => HTML_ENTITIES[name])
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** 비교용 정규화: 유니코드 조합(NFC)을 맞추고 소문자로, 연속 공백은 하나로 */
 export function normalize(value: string) {
   return value.normalize("NFC").toLowerCase().replace(/\s+/g, " ").trim();

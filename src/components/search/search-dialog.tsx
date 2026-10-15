@@ -60,6 +60,11 @@ export function SearchDialog() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  // 화살표로 고른 항목이 목록 밖에 있으면 보이도록 목록을 스크롤합니다.
+  useEffect(() => {
+    document.getElementById(optionId(active))?.scrollIntoView({ block: "nearest" });
+  }, [active]);
+
   function go(doc: SearchDoc) {
     dialogRef.current?.close();
     router.push(postPath(doc.slug));
@@ -113,6 +118,10 @@ export function SearchDialog() {
         ref={dialogRef}
         aria-label="글 검색"
         onClose={() => setFailed(false)}
+        // 창 바깥(배경)을 누르면 닫습니다. 배경을 누르면 이벤트 대상이 <dialog> 자신입니다.
+        onClick={(event) => {
+          if (event.target === event.currentTarget) dialogRef.current?.close();
+        }}
         className="m-0 h-dvh max-h-none w-full max-w-none bg-bg p-0 text-fg backdrop:bg-bg/80 md:bottom-auto md:mx-auto md:mt-24 md:h-auto md:max-h-[calc(100dvh-var(--spacing)*48)] md:max-w-article md:rounded-2xl md:border md:border-border-strong"
       >
         <div className="flex h-full flex-col md:h-auto md:max-h-[inherit]">
@@ -136,15 +145,22 @@ export function SearchDialog() {
               placeholder="글 검색"
               className="h-12 min-w-0 flex-1 bg-transparent text-body-lg outline-none placeholder:text-muted md:h-16"
             />
-            <kbd className="hidden rounded-sm border border-border-strong px-2 font-mono text-caption text-muted md:inline">
-              Esc
-            </kbd>
+            {/* 닫기 버튼. 모바일은 "취소", 태블릿 이상은 Esc 키 모양으로 보이지만 누를 수 있습니다(물리 키보드가 없을 때). */}
             <button
               type="button"
+              aria-label="검색 닫기"
               onClick={() => dialogRef.current?.close()}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center text-body md:hidden"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center text-body md:text-muted md:hover:text-fg"
             >
-              취소
+              <span aria-hidden="true" className="md:hidden">
+                취소
+              </span>
+              <kbd
+                aria-hidden="true"
+                className="hidden rounded-sm border border-border-strong px-2 font-mono text-caption md:inline"
+              >
+                Esc
+              </kbd>
             </button>
           </div>
 
