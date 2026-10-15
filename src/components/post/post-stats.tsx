@@ -43,6 +43,8 @@ async function withLock<T>(name: string, task: () => T | Promise<T>): Promise<T>
 
 export function PostStats({ postId }: { postId: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // 좋아요를 바꿀 때마다 1씩 늘립니다. 그보다 먼저 보낸 숫자 요청의 응답이 늦게 와도 덮어쓰지 않게 합니다.
+  const likeVersion = useRef(0);
   const [stats, setStats] = useState<Stats | null>(null);
   const [liked, setLiked] = useState(false);
   const [pending, setPending] = useState(false);
@@ -54,10 +56,12 @@ export function PostStats({ postId }: { postId: number }) {
 
   useEffect(() => {
     let cancelled = false;
-    const load = (method: string, url: string, onError?: () => void) =>
-      request(url, method)
+    const load = (method: string, url: string, onError?: () => void) => {
+      // 페이지를 떠났다 돌아오면 상태는 남은 채 다시 받으므로, 받는 동안 좋아요를 바꿨으면 응답을 버립니다.
+      const version = likeVersion.current;
+      return request(url, method)
         .then((next) => {
-          if (cancelled) return;
+          if (cancelled || version !== likeVersion.current) return;
           // 누른 상태는 숫자와 함께 채웁니다(그 전에는 버튼이 비활성이라 서버 렌더링 결과와 어긋나지 않음).
           setLiked(readStorage(likedKey) === "1");
           setStats(next);
@@ -66,6 +70,7 @@ export function PostStats({ postId }: { postId: number }) {
           // 숫자를 받지 못하면 자리표시(–)를 그대로 둡니다.
           onError?.();
         });
+    };
 
     let visibility: IntersectionObserver | undefined;
     // 중복 요청을 막으려고 집계 전에 시각을 기록하고, 집계하지 못하면 지워 다음 방문에서 다시 보냅니다.
@@ -118,6 +123,7 @@ export function PostStats({ postId }: { postId: number }) {
     if (!stats || pending) return;
     setMessage("");
     setPending(true);
+    likeVersion.current += 1;
     try {
       // 저장된 상태 읽기부터 요청·저장까지 탭 사이에서 한 번에 하나씩 처리합니다.
       await withLock(`post-like:${postId}`, async () => {
@@ -130,6 +136,7 @@ export function PostStats({ postId }: { postId: number }) {
         setStats({ ...stats, likes: Math.max(stats.likes + (next ? 1 : -1), 0) });
         try {
           setStats(await request(`${base}/like`, next ? "POST" : "DELETE"));
+          setLiked(next);
           writeStorage(likedKey, next ? "1" : "0");
         } catch {
           setLiked(previous.liked);
