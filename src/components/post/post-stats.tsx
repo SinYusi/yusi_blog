@@ -150,7 +150,7 @@ export function PostStats({ postId }: { postId: number }) {
     }
   }
 
-  // 숫자가 오기 전에도 같은 크기로 자리를 잡아 레이아웃이 밀리지 않게 합니다.
+  // 숫자가 오기 전에도 같은 크기로 자리를 잡아 레이아웃이 밀리지 않게 합니다(숫자 자리는 다섯 자리 폭까지 미리 잡음).
   const format = (value: number | undefined) =>
     value === undefined ? "–" : value.toLocaleString("ko-KR");
 
@@ -160,7 +160,10 @@ export function PostStats({ postId }: { postId: number }) {
       className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-meta text-muted"
     >
       <span>
-        조회 <span className="text-fg tabular-nums">{format(stats?.views)}</span>
+        조회{" "}
+        <span className="inline-block min-w-[5ch] text-fg tabular-nums">
+          {format(stats?.views)}
+        </span>
       </span>
       <button
         type="button"
@@ -180,7 +183,7 @@ export function PostStats({ postId }: { postId: number }) {
         >
           <path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10z" />
         </svg>
-        좋아요 <span className="tabular-nums">{format(stats?.likes)}</span>
+        좋아요 <span className="inline-block min-w-[5ch] tabular-nums">{format(stats?.likes)}</span>
       </button>
       <p role="status" className="basis-full empty:hidden">
         {message}
