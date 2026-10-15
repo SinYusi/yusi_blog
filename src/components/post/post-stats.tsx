@@ -127,7 +127,7 @@ export function PostStats({ postId }: { postId: number }) {
     try {
       // 저장된 상태 읽기부터 요청·저장까지 탭 사이에서 한 번에 하나씩 처리합니다.
       await withLock(`post-like:${postId}`, async () => {
-        const previous = { stats, liked };
+        const previousStats = stats;
         // 저장된 상태를 기준으로 바꿔, 여러 탭에서 눌러도 같은 브라우저의 좋아요가 두 번 더해지거나 빠지지 않게 합니다.
         // 저장소를 쓸 수 없으면(null) 이 탭의 상태를 따릅니다.
         const stored = readStorage(likedKey);
@@ -139,8 +139,13 @@ export function PostStats({ postId }: { postId: number }) {
           setLiked(next);
           writeStorage(likedKey, next ? "1" : "0");
         } catch {
-          setLiked(previous.liked);
-          setStats(previous.stats);
+          // 잠금을 기다리는 동안 다른 탭에서 바뀌었을 수 있으므로, 잠금 안에서 읽은 요청 전 상태로 되돌립니다.
+          setLiked(!next);
+          try {
+            setStats(await request(`${base}/stats`, "GET"));
+          } catch {
+            setStats(previousStats);
+          }
           setMessage("좋아요를 반영하지 못했어요. 잠시 뒤 다시 눌러 주세요.");
         }
       });
