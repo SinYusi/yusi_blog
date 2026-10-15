@@ -30,7 +30,9 @@ function writeStorage(key: string, value: string | null) {
 }
 
 async function request(url: string, method: string): Promise<Stats> {
-  const response = await fetch(url, { method, cache: "no-store" });
+  // 카운터를 바꾸는 요청은 보낸 직후 페이지를 떠나도(새로고침·이동) 브라우저가 끝까지 보내게 합니다.
+  // 응답 전에 문서가 닫혀 실패 처리(기록 지우기)를 못 하면, 서버는 못 받았는데 3시간 동안 다시 세지 않기 때문입니다.
+  const response = await fetch(url, { method, cache: "no-store", keepalive: method !== "GET" });
   if (!response.ok) throw new Error(`${method} ${url}: ${response.status}`);
   return response.json();
 }
