@@ -1,4 +1,5 @@
-import { getPostStats, parsePostId } from "@/lib/content/post-stats";
+import { getPostStats } from "@/lib/content/post-stats";
+import { parsePostId } from "@/lib/content/post-stats-input";
 
 // 글의 조회수·좋아요(ADR-0016). 방문마다 바뀌므로 캐시하지 않습니다.
 export async function GET(_request: Request, { params }: RouteContext<"/api/posts/[id]/stats">) {

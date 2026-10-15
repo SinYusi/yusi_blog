@@ -1,4 +1,5 @@
-import { changePostLike, isSameOrigin, parsePostId } from "@/lib/content/post-stats";
+import { changePostLike } from "@/lib/content/post-stats";
+import { isSameOrigin, parsePostId } from "@/lib/content/post-stats-input";
 
 // 좋아요 누르기(POST)·취소(DELETE)(ADR-0016). 같은 브라우저에서 누른 상태는 브라우저가 기억합니다.
 async function change(request: Request, params: Promise<{ id: string }>, delta: 1 | -1) {
