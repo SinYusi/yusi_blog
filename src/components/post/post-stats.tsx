@@ -61,14 +61,15 @@ export function PostStats({ postId }: { postId: number }) {
     const load = (method: string, url: string, onError?: () => void) => {
       // 페이지를 떠났다 돌아오면 상태는 남은 채 다시 받으므로, 받는 동안 좋아요를 바꿨으면 응답을 버립니다.
       const version = likeVersion.current;
-      return request(url, method)
+      // 숫자를 받는 요청은 모두 좋아요 잠금 안에서 보냅니다. 다른 탭이 좋아요를 저장하고 요청하는 중이면
+      // 그 요청이 끝난 뒤의 숫자를 받아, 화면의 누른 상태(저장소 기준)와 숫자가 어긋나지 않게 합니다.
+      return withLock(`post-like:${postId}`, () => request(url, method))
         .then((next) => {
           if (cancelled) return;
           // 받는 동안 좋아요가 바뀌었으면 이 응답은 바뀌기 전 값일 수 있으므로 버리고 다시 받습니다.
-          // 다시 받지 않으면 숫자가 처음 오는 중이었을 때 영역이 '–'로 남습니다. 좋아요 잠금 안에서 받아,
-          // 다른 탭이 진행 중인 좋아요 요청이 끝난 뒤의 숫자를 받습니다.
+          // 다시 받지 않으면 숫자가 처음 오는 중이었을 때 영역이 '–'로 남습니다.
           if (version !== likeVersion.current) {
-            void withLock(`post-like:${postId}`, () => load("GET", `${base}/stats`));
+            load("GET", `${base}/stats`);
             return;
           }
           // 누른 상태는 숫자와 함께 채웁니다(그 전에는 버튼이 비활성이라 서버 렌더링 결과와 어긋나지 않음).
