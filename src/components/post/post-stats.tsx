@@ -35,6 +35,12 @@ async function request(url: string, method: string): Promise<Stats> {
   return response.json();
 }
 
+// 같은 글을 연 여러 탭이 저장된 상태를 동시에 읽고 쓰지 않도록 한 번에 하나씩 실행합니다(Web Locks).
+async function withLock<T>(name: string, task: () => T | Promise<T>): Promise<T> {
+  if (!("locks" in navigator)) return task();
+  return navigator.locks.request(name, async (): Promise<T> => task());
+}
+
 export function PostStats({ postId }: { postId: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -61,35 +67,43 @@ export function PostStats({ postId }: { postId: number }) {
           onError?.();
         });
 
-    const lastViewed = Number(readStorage(viewedKey));
-    if (!(Date.now() - lastViewed < VIEW_INTERVAL_MS)) {
-      // 중복 요청을 막으려고 먼저 기록하고, 집계에 실패하면 지워 다음 방문에서 다시 보냅니다.
+    let visibility: IntersectionObserver | undefined;
+    // 중복 요청을 막으려고 집계 전에 시각을 기록하고, 집계하지 못하면 지워 다음 방문에서 다시 보냅니다.
+    const forget = (viewedAt: string) => {
+      if (readStorage(viewedKey) === viewedAt) writeStorage(viewedKey, null);
+    };
+    withLock(`post-view:${postId}`, () => {
+      if (Date.now() - Number(readStorage(viewedKey)) < VIEW_INTERVAL_MS) return null;
       const viewedAt = String(Date.now());
       writeStorage(viewedKey, viewedAt);
-      load("POST", `${base}/view`, () => {
-        if (readStorage(viewedKey) === viewedAt) writeStorage(viewedKey, null);
-      });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const container = containerRef.current;
-    if (!container) return;
-    const visibility = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        visibility.disconnect();
-        load("GET", `${base}/stats`);
-      },
-      { rootMargin: "400px 0px" },
-    );
-    visibility.observe(container);
+      return viewedAt;
+    }).then((viewedAt) => {
+      if (cancelled) {
+        if (viewedAt) forget(viewedAt);
+        return;
+      }
+      if (viewedAt) {
+        load("POST", `${base}/view`, () => forget(viewedAt));
+        return;
+      }
+      // 이미 센 방문이면 숫자 영역이 화면에 가까워질 때 받습니다.
+      const container = containerRef.current;
+      if (!container) return;
+      visibility = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          visibility?.disconnect();
+          load("GET", `${base}/stats`);
+        },
+        { rootMargin: "400px 0px" },
+      );
+      visibility.observe(container);
+    });
     return () => {
       cancelled = true;
-      visibility.disconnect();
+      visibility?.disconnect();
     };
-  }, [base, likedKey, viewedKey]);
+  }, [base, likedKey, postId, viewedKey]);
 
   // 같은 글을 연 다른 탭에서 좋아요를 바꾸면 누른 상태를 맞춥니다(숫자는 다음 응답에서 맞춰짐).
   useEffect(() => {
@@ -104,11 +118,9 @@ export function PostStats({ postId }: { postId: number }) {
     if (!stats || pending) return;
     setMessage("");
     setPending(true);
-    // 같은 글을 연 여러 탭에서 동시에 눌러도 저장된 상태 읽기부터 요청·저장까지 한 번에 하나씩 처리합니다(Web Locks).
-    const run = (task: () => Promise<void>) =>
-      "locks" in navigator ? navigator.locks.request(`post-like:${postId}`, task) : task();
     try {
-      await run(async () => {
+      // 저장된 상태 읽기부터 요청·저장까지 탭 사이에서 한 번에 하나씩 처리합니다.
+      await withLock(`post-like:${postId}`, async () => {
         const previous = { stats, liked };
         // 저장된 상태를 기준으로 바꿔, 여러 탭에서 눌러도 같은 브라우저의 좋아요가 두 번 더해지거나 빠지지 않게 합니다.
         // 저장소를 쓸 수 없으면(null) 이 탭의 상태를 따릅니다.
