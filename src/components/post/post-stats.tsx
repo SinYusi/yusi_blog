@@ -153,11 +153,14 @@ export function PostStats({ postId }: { postId: number }) {
         const next = stored === null ? !liked : stored !== "1";
         setLiked(next);
         setStats({ ...stats, likes: Math.max(stats.likes + (next ? 1 : -1), 0) });
+        // 요청은 페이지를 떠나도 끝까지 가므로(keepalive) 바뀔 상태를 먼저 저장하고, 실패하면 원래 값으로 되돌립니다.
+        // 응답 뒤에 저장하면, 그 사이 문서가 닫힐 때 서버만 바뀌고 다음 방문에서 같은 요청을 다시 보내게 됩니다.
+        writeStorage(likedKey, next ? "1" : "0");
         try {
           setStats(await request(`${base}/like`, next ? "POST" : "DELETE"));
           setLiked(next);
-          writeStorage(likedKey, next ? "1" : "0");
         } catch {
+          writeStorage(likedKey, stored);
           // 잠금을 기다리는 동안 다른 탭에서 바뀌었을 수 있으므로, 잠금 안에서 읽은 요청 전 상태로 되돌립니다.
           setLiked(!next);
           try {
