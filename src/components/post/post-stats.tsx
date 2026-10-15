@@ -45,7 +45,7 @@ async function withLock<T>(name: string, task: () => T | Promise<T>): Promise<T>
 
 export function PostStats({ postId }: { postId: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // 좋아요 요청을 시작할 때와 끝날 때 1씩 늘립니다. 그 전이나 요청 중에 보낸 숫자 요청의 응답이 늦게 와도 덮어쓰지 않게 합니다.
+  // 좋아요가 바뀔 때(이 탭의 요청 시작·끝, 다른 탭의 변경)마다 1씩 늘립니다. 그 전에 보낸 숫자 요청의 응답이 늦게 와도 덮어쓰지 않게 합니다.
   const likeVersion = useRef(0);
   const [stats, setStats] = useState<Stats | null>(null);
   const [liked, setLiked] = useState(false);
@@ -137,6 +137,8 @@ export function PostStats({ postId }: { postId: number }) {
       const was = event.oldValue === "1";
       const now = event.newValue === "1";
       if (was === now) return;
+      // 이 변경 전에 보낸 숫자 요청의 응답은 바뀌기 전 값일 수 있으므로 버립니다.
+      likeVersion.current += 1;
       setLiked(now);
       setStats(
         (current) => current && { ...current, likes: Math.max(current.likes + (now ? 1 : -1), 0) },
