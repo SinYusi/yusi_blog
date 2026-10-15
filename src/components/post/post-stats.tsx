@@ -150,7 +150,7 @@ export function PostStats({ postId }: { postId: number }) {
     }
   }
 
-  // 숫자가 오기 전에도 같은 크기로 자리를 잡아 레이아웃이 밀리지 않게 합니다(숫자 자리는 다섯 자리 폭까지 미리 잡음).
+  // 숫자가 오기 전에도 같은 크기로 자리를 잡아 레이아웃이 밀리지 않게 합니다(구분 기호를 포함한 다섯 자리 숫자 폭까지 미리 잡음).
   const format = (value: number | undefined) =>
     value === undefined ? "–" : value.toLocaleString("ko-KR");
 
@@ -161,7 +161,7 @@ export function PostStats({ postId }: { postId: number }) {
     >
       <span>
         조회{" "}
-        <span className="inline-block min-w-[5ch] text-fg tabular-nums">
+        <span className="inline-block min-w-[6ch] text-fg tabular-nums">
           {format(stats?.views)}
         </span>
       </span>
@@ -183,9 +183,9 @@ export function PostStats({ postId }: { postId: number }) {
         >
           <path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10z" />
         </svg>
-        좋아요 <span className="inline-block min-w-[5ch] tabular-nums">{format(stats?.likes)}</span>
+        좋아요 <span className="inline-block min-w-[6ch] tabular-nums">{format(stats?.likes)}</span>
       </button>
-      <p role="status" className="basis-full empty:hidden">
+      <p role="status" className="basis-full empty:sr-only">
         {message}
       </p>
     </div>
