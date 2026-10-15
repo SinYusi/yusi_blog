@@ -129,10 +129,18 @@ export function PostStats({ postId }: { postId: number }) {
     };
   }, [base, likedKey, postId, viewedKey]);
 
-  // 같은 글을 연 다른 탭에서 좋아요를 바꾸면 누른 상태를 맞춥니다(숫자는 다음 응답에서 맞춰짐).
+  // 같은 글을 연 다른 탭에서 좋아요를 바꾸면 누른 상태와 숫자를 함께 맞춥니다.
+  // 다른 탭은 요청 전에 바뀔 상태를, 실패하면 되돌린 상태를 쓰므로 그때마다 ±1 하면 그 탭의 숫자와 같아집니다.
   useEffect(() => {
     const sync = (event: StorageEvent) => {
-      if (event.key === likedKey) setLiked(event.newValue === "1");
+      if (event.key !== likedKey) return;
+      const was = event.oldValue === "1";
+      const now = event.newValue === "1";
+      if (was === now) return;
+      setLiked(now);
+      setStats(
+        (current) => current && { ...current, likes: Math.max(current.likes + (now ? 1 : -1), 0) },
+      );
     };
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
