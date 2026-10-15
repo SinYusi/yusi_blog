@@ -200,8 +200,13 @@ export function SearchDialog() {
                       <Highlight value={snippet} terms={terms} />
                     </p>
                   )}
-                  <p className="mt-1.5 font-mono text-caption text-date">
-                    {formatDate(new Date(doc.publishedAt))}
+                  <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-caption">
+                    <span className="text-date">{formatDate(new Date(doc.publishedAt))}</span>
+                    {doc.tags.map((tag) => (
+                      <span key={tag} className="text-accent">
+                        #<Highlight value={tag} terms={terms} />
+                      </span>
+                    ))}
                   </p>
                 </li>
               ))}
