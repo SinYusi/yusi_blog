@@ -80,3 +80,16 @@ describe("htmlToSearchText", () => {
     );
   });
 });
+
+describe("분해형 한글(NFD)", () => {
+  it("본문이 NFD여도 검색어 주변을 미리보기로 보여 주고 강조한다", () => {
+    const nfd = (s: string) => s.normalize("NFD");
+    const docs = [doc({ text: nfd("가".repeat(200) + " 리렌더링을 막았다") })];
+    const [result] = search(docs, "리렌더링");
+    assert.match(result.snippet, /리렌더링을 막았다/);
+    assert.deepEqual(
+      highlightParts(nfd("리렌더링"), ["렌더링"]).map((part) => part.match),
+      [false, true],
+    );
+  });
+});

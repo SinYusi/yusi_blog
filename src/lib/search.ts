@@ -98,18 +98,21 @@ export function search(docs: SearchDoc[], query: string, limit = 20): SearchResu
 
 function snippetFor(doc: SearchDoc, terms: string[]) {
   const summary = normalize(doc.summary);
-  if (doc.summary && terms.some((term) => summary.includes(term))) return doc.summary;
-  const text = doc.text.replace(/\s+/g, " ");
-  const lower = normalize(text);
+  if (doc.summary && terms.some((term) => summary.includes(term)))
+    return doc.summary.normalize("NFC");
+  // 찾는 위치와 자르는 문자열이 같은 형태(NFC)여야 분해형 한글이 섞여도 검색어 주변이 나옵니다.
+  const text = doc.text.normalize("NFC").replace(/\s+/g, " ");
+  const lower = text.toLowerCase();
   const at = Math.min(...terms.map((term) => lower.indexOf(term)).filter((i) => i >= 0));
-  if (!Number.isFinite(at)) return doc.summary || text.slice(0, SNIPPET_LENGTH);
+  if (!Number.isFinite(at)) return doc.summary.normalize("NFC") || text.slice(0, SNIPPET_LENGTH);
   const start = Math.max(0, at - SNIPPET_BEFORE);
   const piece = text.slice(start, start + SNIPPET_LENGTH);
   return `${start > 0 ? "…" : ""}${piece}${start + SNIPPET_LENGTH < text.length ? "…" : ""}`;
 }
 
-/** 강조 표시용으로 글자를 검색어와 일치하는 조각·나머지 조각으로 나눕니다(대소문자 무시). */
-export function highlightParts(value: string, terms: string[]) {
+/** 강조 표시용으로 글자를 검색어와 일치하는 조각·나머지 조각으로 나눕니다(대소문자 무시, NFC로 맞춘 글자 기준). */
+export function highlightParts(raw: string, terms: string[]) {
+  const value = raw.normalize("NFC");
   const lower = value.toLowerCase();
   const marks: [number, number][] = [];
   for (const term of terms) {
