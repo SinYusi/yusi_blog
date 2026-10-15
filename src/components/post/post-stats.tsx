@@ -48,7 +48,7 @@ export function PostStats({ postId }: { postId: number }) {
 
   useEffect(() => {
     let cancelled = false;
-    const load = (method: string, url: string) =>
+    const load = (method: string, url: string, onError?: () => void) =>
       request(url, method)
         .then((next) => {
           if (cancelled) return;
@@ -58,12 +58,17 @@ export function PostStats({ postId }: { postId: number }) {
         })
         .catch(() => {
           // 숫자를 받지 못하면 자리표시(–)를 그대로 둡니다.
+          onError?.();
         });
 
     const lastViewed = Number(readStorage(viewedKey));
     if (!(Date.now() - lastViewed < VIEW_INTERVAL_MS)) {
-      writeStorage(viewedKey, String(Date.now()));
-      load("POST", `${base}/view`);
+      // 중복 요청을 막으려고 먼저 기록하고, 집계에 실패하면 지워 다음 방문에서 다시 보냅니다.
+      const viewedAt = String(Date.now());
+      writeStorage(viewedKey, viewedAt);
+      load("POST", `${base}/view`, () => {
+        if (readStorage(viewedKey) === viewedAt) writeStorage(viewedKey, null);
+      });
       return () => {
         cancelled = true;
       };
@@ -86,17 +91,29 @@ export function PostStats({ postId }: { postId: number }) {
     };
   }, [base, likedKey, viewedKey]);
 
+  // 같은 글을 연 다른 탭에서 좋아요를 바꾸면 누른 상태를 맞춥니다(숫자는 다음 응답에서 맞춰짐).
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key === likedKey) setLiked(event.newValue === "1");
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [likedKey]);
+
   async function toggleLike() {
     if (!stats || pending) return;
     const previous = { stats, liked };
-    const next = !liked;
+    // 저장된 상태를 기준으로 바꿔, 여러 탭에서 눌러도 같은 브라우저의 좋아요가 두 번 더해지거나 빠지지 않게 합니다.
+    // 저장소를 쓸 수 없으면(null) 이 탭의 상태를 따릅니다.
+    const stored = readStorage(likedKey);
+    const next = stored === null ? !liked : stored !== "1";
     setLiked(next);
     setStats({ ...stats, likes: Math.max(stats.likes + (next ? 1 : -1), 0) });
     setMessage("");
     setPending(true);
     try {
       setStats(await request(`${base}/like`, next ? "POST" : "DELETE"));
-      writeStorage(likedKey, next ? "1" : null);
+      writeStorage(likedKey, next ? "1" : "0");
     } catch {
       setLiked(previous.liked);
       setStats(previous.stats);
