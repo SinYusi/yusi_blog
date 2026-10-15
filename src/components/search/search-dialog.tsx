@@ -71,12 +71,15 @@ export function SearchDialog() {
   }
 
   function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    // 한글 등 IME 조합 중의 Enter·방향키는 글자 확정·후보 선택이므로 건너뜁니다.
+    // Safari는 조합을 확정하는 Enter에서 isComposing이 false일 수 있어 keyCode 229(조합 중 입력)도 봅니다.
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
     if (results.length === 0) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       const step = event.key === "ArrowDown" ? 1 : -1;
       setActive((current) => (current + step + results.length) % results.length);
-    } else if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+    } else if (event.key === "Enter") {
       event.preventDefault();
       go(results[Math.min(active, results.length - 1)].doc);
     }
