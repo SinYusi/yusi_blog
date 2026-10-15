@@ -111,7 +111,11 @@
   --breakpoint-lg: 64rem;
 
   --container-article: 42.5rem;
-  --container-content: 68rem;
+  /* 콘텐츠 1088px(68rem) + 태블릿 이상 좌우 여백 40px씩. max-w-content는 여백(px-5 md:px-10)을 포함한 상자에 씁니다. */
+  --container-content: 73rem;
+
+  /* 글 상세 데스크톱 목차 위 여백. 보통 128px, 창이 낮으면 창 높이의 20%로 줄여 목차 목록이 스크롤할 공간을 남깁니다(pt-toc-top). */
+  --spacing-toc-top: min(calc(var(--spacing) * 32), 20dvh);
   --container-admin-sidebar: 15rem;
 }
 

@@ -1,4 +1,4 @@
-import { getPostsPage, getPublicSeries, latestModifiedAt } from "@/lib/content/posts";
+import { getPostsPage, getPublicSeries } from "@/lib/content/posts";
 import { absoluteUrl, escapeXml, postPath, seriesPath, tagPath } from "@/lib/site";
 
 /*
@@ -17,20 +17,17 @@ export async function GET() {
   const tagSlugs = new Set(all.flatMap((post) => post.tags.map((tag) => tag.slug)));
 
   const entries = [
-    // 홈은 최근 글뿐 아니라 전체 공개 글로 센 시리즈·태그 글 수도 보여 주므로 전체 기준입니다.
-    { url: absoluteUrl("/"), lastModified: latestModifiedAt(all) },
-    { url: absoluteUrl("/posts"), lastModified: latestModifiedAt(first.items) },
-    ...pages.map((page, i) => ({
-      url: absoluteUrl(`/posts/page/${i + 2}`),
-      lastModified: latestModifiedAt(page.items),
-    })),
+    // 글 상세의 수정 시각은 그 글의 수정 시각이라 정확합니다.
     ...all.map((post) => ({
       url: absoluteUrl(postPath(post.slug)),
       lastModified: post.modifiedAt,
     })),
-    // 태그·시리즈 페이지는 글이 그 태그·시리즈에서 빠지거나 비공개가 될 때도 바뀌는데, 그 시각은 남지 않습니다.
-    // 남은 글의 시각으로는 과거로 돌아갈 수 있어 수정 시각(lastmod)을 넣지 않습니다.
+    // 목록·태그·시리즈 페이지는 글이 비공개가 되거나 태그·시리즈에서 빠질 때도 바뀌는데, 그 시각은 남지 않습니다.
+    // 남은 글의 시각으로는 과거로 돌아갈 수 있어 수정 시각(lastmod)을 넣지 않습니다(#69, #85).
     ...[
+      "/",
+      "/posts",
+      ...pages.map((_, i) => `/posts/page/${i + 2}`),
       "/tags",
       ...[...tagSlugs].map(tagPath),
       "/series",
