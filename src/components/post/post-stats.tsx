@@ -118,15 +118,18 @@ export function PostStats({ postId }: { postId: number }) {
     };
 
     // 본문을 보기 전에 떠난 방문은 집계하지 않고 DB 호출도 미룹니다.
-    const body = containerRef.current?.closest("article")?.querySelector("[data-post-body]");
+    // 댓글로 바로 들어오면(#comments-heading, 댓글 로그인 복귀) 본문을 지나치므로, 이 영역이 보여도 시작합니다.
+    const container = containerRef.current;
+    const body = container?.closest("article")?.querySelector("[data-post-body]");
     let bodyVisibility: IntersectionObserver | undefined;
-    if (body) {
+    if (body && container) {
       bodyVisibility = new IntersectionObserver((entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
         bodyVisibility?.disconnect();
         start();
       });
       bodyVisibility.observe(body);
+      bodyVisibility.observe(container);
     } else {
       start();
     }
