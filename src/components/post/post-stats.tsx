@@ -65,9 +65,10 @@ export function PostStats({ postId }: { postId: number }) {
         .then((next) => {
           if (cancelled) return;
           // 받는 동안 좋아요가 바뀌었으면 이 응답은 바뀌기 전 값일 수 있으므로 버리고 다시 받습니다.
-          // 다시 받지 않으면 숫자가 처음 오는 중이었을 때 영역이 '–'로 남습니다.
+          // 다시 받지 않으면 숫자가 처음 오는 중이었을 때 영역이 '–'로 남습니다. 좋아요 잠금 안에서 받아,
+          // 다른 탭이 진행 중인 좋아요 요청이 끝난 뒤의 숫자를 받습니다.
           if (version !== likeVersion.current) {
-            load("GET", `${base}/stats`);
+            void withLock(`post-like:${postId}`, () => load("GET", `${base}/stats`));
             return;
           }
           // 누른 상태는 숫자와 함께 채웁니다(그 전에는 버튼이 비활성이라 서버 렌더링 결과와 어긋나지 않음).
