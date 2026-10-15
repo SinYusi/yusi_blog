@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 /*
  * 글 조회수·좋아요(ADR-0016). 글 HTML은 정적이므로 숫자는 브라우저에서 받아 채웁니다.
- * - 조회: 글을 열면 한 번 집계합니다. 같은 브라우저·같은 글은 3시간에 한 번만 보냅니다(localStorage).
+ * - 조회: 본문이 화면에 들어오면 한 번 집계합니다. 같은 브라우저·같은 글은 3시간에 한 번만 보냅니다(localStorage).
  * - 숫자: 집계 응답으로 채우고, 집계하지 않은 방문에서는 이 영역이 화면에 가까워질 때 받습니다(DB 호출을 줄임).
  * - 좋아요: 숫자를 먼저 바꾸고(낙관적 업데이트) 요청합니다. 실패하면 되돌리고 알립니다. 다시 누르면 취소됩니다.
  */
@@ -77,35 +77,52 @@ export function PostStats({ postId }: { postId: number }) {
     const forget = (viewedAt: string) => {
       if (readStorage(viewedKey) === viewedAt) writeStorage(viewedKey, null);
     };
-    withLock(`post-view:${postId}`, () => {
-      if (Date.now() - Number(readStorage(viewedKey)) < VIEW_INTERVAL_MS) return null;
-      const viewedAt = String(Date.now());
-      writeStorage(viewedKey, viewedAt);
-      return viewedAt;
-    }).then((viewedAt) => {
-      if (cancelled) {
-        if (viewedAt) forget(viewedAt);
-        return;
-      }
-      if (viewedAt) {
-        load("POST", `${base}/view`, () => forget(viewedAt));
-        return;
-      }
-      // 이미 센 방문이면 숫자 영역이 화면에 가까워질 때 받습니다.
-      const container = containerRef.current;
-      if (!container) return;
-      visibility = new IntersectionObserver(
-        (entries) => {
-          if (!entries.some((entry) => entry.isIntersecting)) return;
-          visibility?.disconnect();
-          load("GET", `${base}/stats`);
-        },
-        { rootMargin: "400px 0px" },
-      );
-      visibility.observe(container);
-    });
+    const start = () => {
+      withLock(`post-view:${postId}`, () => {
+        if (Date.now() - Number(readStorage(viewedKey)) < VIEW_INTERVAL_MS) return null;
+        const viewedAt = String(Date.now());
+        writeStorage(viewedKey, viewedAt);
+        return viewedAt;
+      }).then((viewedAt) => {
+        if (cancelled) {
+          if (viewedAt) forget(viewedAt);
+          return;
+        }
+        if (viewedAt) {
+          load("POST", `${base}/view`, () => forget(viewedAt));
+          return;
+        }
+        // 이미 센 방문이면 숫자 영역이 화면에 가까워질 때 받습니다.
+        const container = containerRef.current;
+        if (!container) return;
+        visibility = new IntersectionObserver(
+          (entries) => {
+            if (!entries.some((entry) => entry.isIntersecting)) return;
+            visibility?.disconnect();
+            load("GET", `${base}/stats`);
+          },
+          { rootMargin: "400px 0px" },
+        );
+        visibility.observe(container);
+      });
+    };
+
+    // 본문을 보기 전에 떠난 방문은 집계하지 않고 DB 호출도 미룹니다.
+    const body = containerRef.current?.closest("article")?.querySelector("[data-post-body]");
+    let bodyVisibility: IntersectionObserver | undefined;
+    if (body) {
+      bodyVisibility = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        bodyVisibility?.disconnect();
+        start();
+      });
+      bodyVisibility.observe(body);
+    } else {
+      start();
+    }
     return () => {
       cancelled = true;
+      bodyVisibility?.disconnect();
       visibility?.disconnect();
     };
   }, [base, likedKey, postId, viewedKey]);
