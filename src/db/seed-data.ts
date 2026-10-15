@@ -83,7 +83,7 @@ export const seedPosts: SeedPost[] = [
       `<p>이 블로그는 글을 올리는 공간이면서, 렌더링 전략과 성능을 직접 설계하고 수치로 확인하는 프로젝트입니다. 시작하면서 두 가지를 먼저 정했습니다. 어떤 프레임워크로 만들지, 글을 어디에 저장할지.</p>`,
       h2("framework", "Next.js App Router"),
       `<p>공개 페이지는 읽기 위주라 초기 로딩과 검색 노출이 중요하고, 관리자 화면은 상호작용이 많습니다. 두 영역에 서로 다른 렌더링이 필요해서, 라우트마다 전략을 고를 수 있는 App Router를 골랐습니다.</p>`,
-      `<table><thead><tr><th>영역</th><th>전략</th><th>이유</th></tr></thead><tbody><tr><td>글 목록, 글 상세</td><td>정적 생성 + on-demand revalidation</td><td>읽기 위주, 빠른 첫 응답</td></tr><tr><td>검색</td><td>동적 렌더링</td><td>검색어마다 결과가 다름</td></tr><tr><td>관리자</td><td>동적 렌더링</td><td>인증 필요, 캐시 대상 아님</td></tr></tbody></table>`,
+      `<table><thead><tr><th>영역</th><th>전략</th><th>이유</th></tr></thead><tbody><tr><td>글 목록, 글 상세</td><td>정적 생성 + on-demand revalidation</td><td>읽기 위주, 빠른 첫 응답</td></tr><tr><td>검색</td><td>색인은 정적 생성 + 저장 시 갱신, 검색은 브라우저</td><td>키 입력마다 서버·DB 호출 없음</td></tr><tr><td>관리자</td><td>동적 렌더링</td><td>인증 필요, 캐시 대상 아님</td></tr></tbody></table>`,
       h2("cms", "자체 CMS를 고른 이유"),
       `<p>Markdown 파일로 글을 관리하면 가장 빠르게 만들 수 있지만, 에디터·자동 저장·발행 흐름을 구현해 볼 기회가 없습니다. 작업량이 늘더라도 전 과정을 직접 설계하는 쪽을 택했습니다.</p>`,
       callout(
