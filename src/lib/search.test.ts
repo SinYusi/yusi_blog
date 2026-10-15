@@ -38,6 +38,25 @@ describe("search", () => {
     );
   });
   it("모든 조각이 들어 있어야 하고, 제목 일치가 본문 일치보다 앞선다", () => {
+    const rankingDocs = [
+      doc({
+        slug: "body-memo",
+        title: "기록",
+        text: "memo 이야기",
+        publishedAt: "2026-10-02T00:00:00.000Z",
+      }),
+      doc({
+        slug: "title-memo",
+        title: "memo 기록",
+        publishedAt: "2026-10-01T00:00:00.000Z",
+      }),
+    ];
+
+    assert.deepEqual(
+      search(rankingDocs, "memo").map((r) => r.doc.slug),
+      ["title-memo", "body-memo"],
+    );
+
     assert.deepEqual(
       search(docs, "react 렌더링").map((r) => r.doc.slug),
       ["render"],
