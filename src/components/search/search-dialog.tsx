@@ -34,14 +34,19 @@ export function SearchDialog() {
   const terms = useMemo(() => searchTerms(query), [query]);
   const results = useMemo(() => (docs ? search(docs, query) : []), [docs, query]);
 
+  const loadingRef = useRef(false);
   function open() {
     dialogRef.current?.showModal();
-    if (docs) return;
+    if (docs || loadingRef.current) return;
+    loadingRef.current = true;
     setFailed(false);
     fetch(SEARCH_INDEX_PATH)
       .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
       .then((data: SearchDoc[]) => setDocs(data))
-      .catch(() => setFailed(true));
+      .catch(() => setFailed(true))
+      .finally(() => {
+        loadingRef.current = false;
+      });
   }
   const openRef = useRef(open);
   useEffect(() => {
