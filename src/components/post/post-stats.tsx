@@ -102,22 +102,29 @@ export function PostStats({ postId }: { postId: number }) {
 
   async function toggleLike() {
     if (!stats || pending) return;
-    const previous = { stats, liked };
-    // 저장된 상태를 기준으로 바꿔, 여러 탭에서 눌러도 같은 브라우저의 좋아요가 두 번 더해지거나 빠지지 않게 합니다.
-    // 저장소를 쓸 수 없으면(null) 이 탭의 상태를 따릅니다.
-    const stored = readStorage(likedKey);
-    const next = stored === null ? !liked : stored !== "1";
-    setLiked(next);
-    setStats({ ...stats, likes: Math.max(stats.likes + (next ? 1 : -1), 0) });
     setMessage("");
     setPending(true);
+    // 같은 글을 연 여러 탭에서 동시에 눌러도 저장된 상태 읽기부터 요청·저장까지 한 번에 하나씩 처리합니다(Web Locks).
+    const run = (task: () => Promise<void>) =>
+      "locks" in navigator ? navigator.locks.request(`post-like:${postId}`, task) : task();
     try {
-      setStats(await request(`${base}/like`, next ? "POST" : "DELETE"));
-      writeStorage(likedKey, next ? "1" : "0");
-    } catch {
-      setLiked(previous.liked);
-      setStats(previous.stats);
-      setMessage("좋아요를 반영하지 못했어요. 잠시 뒤 다시 눌러 주세요.");
+      await run(async () => {
+        const previous = { stats, liked };
+        // 저장된 상태를 기준으로 바꿔, 여러 탭에서 눌러도 같은 브라우저의 좋아요가 두 번 더해지거나 빠지지 않게 합니다.
+        // 저장소를 쓸 수 없으면(null) 이 탭의 상태를 따릅니다.
+        const stored = readStorage(likedKey);
+        const next = stored === null ? !liked : stored !== "1";
+        setLiked(next);
+        setStats({ ...stats, likes: Math.max(stats.likes + (next ? 1 : -1), 0) });
+        try {
+          setStats(await request(`${base}/like`, next ? "POST" : "DELETE"));
+          writeStorage(likedKey, next ? "1" : "0");
+        } catch {
+          setLiked(previous.liked);
+          setStats(previous.stats);
+          setMessage("좋아요를 반영하지 못했어요. 잠시 뒤 다시 눌러 주세요.");
+        }
+      });
     } finally {
       setPending(false);
     }
