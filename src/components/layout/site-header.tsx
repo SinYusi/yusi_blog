@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { SearchDialog } from "@/components/search/search-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 import { MobileMenu } from "./mobile-menu";
@@ -21,23 +22,27 @@ export function SiteHeader() {
           />
         </Link>
 
-        <nav
-          aria-label="주요 메뉴"
-          className="hidden items-center gap-6 font-mono text-meta md:flex lg:gap-8"
-        >
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              className="inline-flex min-h-11 items-center text-muted hover:text-fg aria-[current=page]:text-fg"
-            >
-              ./{item.label}
-            </NavLink>
-          ))}
-          <ThemeToggle />
-        </nav>
-
-        <MobileMenu />
+        <div className="flex items-center gap-1 md:gap-6 lg:gap-8">
+          <nav
+            aria-label="주요 메뉴"
+            className="hidden items-center gap-6 font-mono text-meta md:flex lg:gap-8"
+          >
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                className="inline-flex min-h-11 items-center text-muted hover:text-fg aria-[current=page]:text-fg"
+              >
+                ./{item.label}
+              </NavLink>
+            ))}
+          </nav>
+          <SearchDialog />
+          <div className="hidden md:block">
+            <ThemeToggle />
+          </div>
+          <MobileMenu />
+        </div>
       </div>
     </header>
   );
