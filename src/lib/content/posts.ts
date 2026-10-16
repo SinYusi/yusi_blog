@@ -6,6 +6,8 @@ import { cacheLife, cacheTag } from "next/cache";
 import { getDb } from "@/db";
 import { posts, postSlugRedirects, postTags, tags } from "@/db/schema";
 
+import { htmlToSearchText, type SearchDoc } from "@/lib/search";
+
 import { renderPostHtml, type TocItem } from "./render";
 
 /*
@@ -22,7 +24,7 @@ export const POSTS_PAGE_SIZE = 10;
  * 공개 조건: 발행(published) 또는 예약(scheduled) 상태이고 발행 시각이 지난 글.
  * 예약 글을 발행 시각에 published로 바꾸는 작업을 따로 두지 않고, 조회 조건으로 공개 여부를 정합니다.
  */
-const isPublic = and(
+export const isPublic = and(
   inArray(posts.status, ["published", "scheduled"]),
   lte(posts.publishedAt, sql`now()`),
 );
@@ -171,6 +173,34 @@ export async function getTagPosts(slug: string) {
   return tag ? { tag, items } : null;
 }
 
+const SEARCH_TEXT_MAX = 2000;
+/**
+ * 검색 색인(ADR-0015). 공개 글의 제목·요약·태그·발행일과 본문 앞 2,000자. 최근 글부터입니다.
+ * 검색 창을 처음 열 때만 받으므로(/search-index.json) 글 페이지의 첫 화면에는 들어가지 않습니다.
+ */
+export async function getSearchIndex(): Promise<SearchDoc[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CONTENT_CACHE_TAG);
+
+  const rows = await getDb().query.posts.findMany({
+    where: isPublic,
+    orderBy: [desc(posts.publishedAt), desc(posts.id)],
+    columns: { slug: true, title: true, summary: true, publishedAt: true, contentHtml: true },
+    with: { postTags: { with: { tag: { columns: { name: true } } } } },
+  });
+
+  return rows.map((row) => ({
+    slug: row.slug,
+    title: row.title,
+    summary: row.summary,
+    tags: row.postTags.map((link) => link.tag.name),
+    // isPublic 조건상 발행 시각은 항상 있습니다.
+    publishedAt: row.publishedAt!.toISOString(),
+    text: htmlToSearchText(row.contentHtml).slice(0, SEARCH_TEXT_MAX),
+  }));
+}
+
 /** 정적 생성할 공개 글의 slug 목록 */
 export async function getPublicPostSlugs() {
   // 목록 조회 결과를 재사용해 빌드 쿼리를 늘리지 않습니다.
@@ -181,7 +211,7 @@ function latestOf(a: Date, b: Date) {
   return a > b ? a : b;
 }
 
-/** 목록에 담긴 글 중 가장 늦은 수정 시각 (sitemap의 목록 lastModified, RSS lastBuildDate) */
+/** 목록에 담긴 글 중 가장 늦은 수정 시각 (RSS lastBuildDate) */
 export function latestModifiedAt(items: PostListItem[]) {
   return items.reduce<Date | undefined>(
     (latest, post) => (latest ? latestOf(latest, post.modifiedAt) : post.modifiedAt),

@@ -3,6 +3,7 @@
 import { useRef } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FEED_PATH } from "@/lib/site";
 
 import { GITHUB_URL, NAV_ITEMS } from "./nav-items";
 import { NavLink } from "./nav-link";
@@ -82,12 +83,20 @@ export function MobileMenu() {
           </nav>
 
           <div className="mt-auto flex items-center justify-between py-8">
-            <a
-              href={GITHUB_URL}
-              className="inline-flex min-h-11 items-center px-2 font-mono text-meta text-muted hover:text-fg"
-            >
-              github
-            </a>
+            <div className="flex gap-2">
+              <a
+                href={FEED_PATH}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 font-mono text-meta text-muted hover:text-fg"
+              >
+                rss
+              </a>
+              <a
+                href={GITHUB_URL}
+                className="inline-flex min-h-11 items-center px-2 font-mono text-meta text-muted hover:text-fg"
+              >
+                github
+              </a>
+            </div>
             <ThemeToggle />
           </div>
         </div>

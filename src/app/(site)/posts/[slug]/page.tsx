@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 
 import { CodeCopy } from "@/components/post/code-copy";
 import { Comments } from "@/components/post/comments";
+import { PostStats } from "@/components/post/post-stats";
 import { SeriesNav } from "@/components/post/series-nav";
 import { TableOfContents } from "@/components/post/table-of-contents";
 import { TagList } from "@/components/posts/tag-list";
@@ -94,7 +95,8 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
   return (
     <div className="grid grid-cols-1 gap-x-6 pt-8 pb-16 md:pt-12 lg:grid-cols-12 lg:pt-16">
       <PostJsonLd post={post} />
-      <article className="min-w-0 lg:col-span-8">
+      {/* 본문 읽기 폭은 화면 너비와 상관없이 680px 이하로 둡니다(DESIGN.md). 태블릿 한 열에서 한 줄이 길어지지 않게 합니다. */}
+      <article className="max-w-article min-w-0 lg:col-span-8">
         <header className="border-b border-border pb-6 md:pb-8">
           {post.series && (
             <p className="-mt-3 mb-1 font-mono text-caption text-muted md:text-meta">
@@ -151,16 +153,24 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
 
         <CodeCopy>
           {/* 본문은 renderPostHtml에서 허용 목록으로 정화(sanitize)한 HTML입니다. */}
-          <div className="prose-article" dangerouslySetInnerHTML={{ __html: post.html }} />
+          {/* 제목 영역·접이식 목차와 첫 문단 사이를 띄웁니다(관리자 미리보기는 그대로). */}
+          <div
+            data-post-body
+            className="prose-article pt-8"
+            dangerouslySetInnerHTML={{ __html: post.html }}
+          />
         </CodeCopy>
 
+        <PostStats postId={post.id} />
         {post.series && <SeriesNav series={post.series} />}
         {COMMENTS_ENABLED && <Comments postId={post.id} />}
       </article>
 
       {hasToc && (
         <aside className="hidden lg:col-span-3 lg:col-start-10 lg:block">
-          <div className="sticky top-8 pt-32">
+          {/* 화면 높이(위아래 여백 32px씩) 안에 두고, 목차가 넘치면 목차 안에서 스크롤합니다.
+              위 여백은 보통 128px이고, 창이 낮으면 창 높이의 20%로 줄여 목록이 스크롤할 공간을 남깁니다. */}
+          <div className="sticky top-8 flex max-h-[calc(100dvh-var(--spacing)*16)] flex-col pt-toc-top">
             <TableOfContents items={post.toc} />
           </div>
         </aside>
