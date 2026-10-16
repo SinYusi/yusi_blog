@@ -117,6 +117,8 @@
   /* 글 상세 데스크톱 목차 위 여백. 보통 128px, 창이 낮으면 창 높이의 20%로 줄여 목차 목록이 스크롤할 공간을 남깁니다(pt-toc-top). */
   --spacing-toc-top: min(calc(var(--spacing) * 32), 20dvh);
   --container-admin-sidebar: 15rem;
+  /* 글 조회수·좋아요 숫자 자리. 구분 기호를 포함한 다섯 자리(12,345)까지 미리 잡아 숫자가 와도 레이아웃이 밀리지 않습니다(min-w-stat). */
+  --container-stat: 6ch;
 }
 
 @layer base {

@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 
 import { CodeCopy } from "@/components/post/code-copy";
 import { Comments } from "@/components/post/comments";
+import { PostStats } from "@/components/post/post-stats";
 import { SeriesNav } from "@/components/post/series-nav";
 import { TableOfContents } from "@/components/post/table-of-contents";
 import { TagList } from "@/components/posts/tag-list";
@@ -153,9 +154,14 @@ export default async function PostPage({ params }: PageProps<"/posts/[slug]">) {
         <CodeCopy>
           {/* 본문은 renderPostHtml에서 허용 목록으로 정화(sanitize)한 HTML입니다. */}
           {/* 제목 영역·접이식 목차와 첫 문단 사이를 띄웁니다(관리자 미리보기는 그대로). */}
-          <div className="prose-article pt-8" dangerouslySetInnerHTML={{ __html: post.html }} />
+          <div
+            data-post-body
+            className="prose-article pt-8"
+            dangerouslySetInnerHTML={{ __html: post.html }}
+          />
         </CodeCopy>
 
+        <PostStats postId={post.id} />
         {post.series && <SeriesNav series={post.series} />}
         {COMMENTS_ENABLED && <Comments postId={post.id} />}
       </article>
