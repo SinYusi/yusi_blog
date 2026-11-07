@@ -44,3 +44,6 @@ next-env.d.ts
 
 # python
 __pycache__/
+
+# taste-skill 검사 결과(스크린샷, report.json)
+.taste-skill/
