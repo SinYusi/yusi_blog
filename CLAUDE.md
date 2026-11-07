@@ -21,3 +21,17 @@
 8. 머지 후 다음 작업 전에 `dev`를 pull한다.
 9. 릴리스는 사용자가 지시할 때만 `dev` → `main` PR로 만들고 `release` 라벨을 붙인다 (merge commit으로 머지, AI 재리뷰 없음). 머지되면 annotated 태그와 GitHub Release(하이라이트 + 자동 목록)를 만든다 (docs/CONTRIBUTING.md 릴리스 절).
 10. 재리뷰: 리뷰어의 코드 제안을 그대로 적용한 커밋만 생략한다. 직접 작성한 수정은 다시 리뷰받는다(재리뷰할 리뷰어는 수정 커밋의 변경 범위로 정한다: 문서만 바꿨으면 Codex만). CodeRabbit 리뷰를 기다리는 PR이 있으면 새 PR은 그 뒤에 연다(자동 리뷰가 시간당 한도를 쓰므로).
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues(`gh` CLI). 이슈 본문·라벨·마일스톤은 위 Workflow 1단계를 따른다. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+기본 다섯 역할을 같은 이름의 라벨로 쓴다(`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). `/triage`로 분류할 때만 붙인다. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: 루트 `GLOSSARY.md`(필요할 때 생성) + `docs/adr/`. See `docs/agents/domain.md`.
